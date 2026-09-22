@@ -9,8 +9,8 @@ A cozy 2D puzzle-adventure starring **Theo** (boy explorer) and **Pip** (his dog
   - D-pad — move
   - A — act / advance
   - B — switch Theo ⇄ Pip
-  - START — menus
-  - SELECT — whistle
+  - START — whistle
+  - SELECT — throw stick
 
 ## Deploy
 
