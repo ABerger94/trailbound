@@ -261,6 +261,43 @@ LEVELS.forEach((L, i) => {
   ok(bfs(LEVELS[9].map, LEVELS[9], 10, 8, 'theo', 14, 8), 'T10: push lane to far plate walkable');
 }
 
+// ================= H. Shell analog joystick =================
+{
+  const shellHtml = fs.readFileSync(require('path').join(__dirname, 'deploy', 'index.html'), 'utf8');
+  // Joystick markup: portrait + landscape bases with knobs
+  ok(/id="joyBase"/.test(shellHtml), 'H: portrait joystick base present');
+  ok(/id="joyNub"/.test(shellHtml), 'H: portrait joystick knob present');
+  ok(/id="lJoyBase"/.test(shellHtml), 'H: landscape joystick base present');
+  ok(/id="lJoyNub"/.test(shellHtml), 'H: landscape joystick knob present');
+  // Old discrete arrow buttons must be gone from both shells
+  ['btnUp', 'btnDown', 'btnLeft', 'btnRight', 'lUp', 'lDown', 'lLeft', 'lRight']
+    .forEach(id => ok(!new RegExp('id="' + id + '"').test(shellHtml), 'H: arrow button ' + id + ' removed'));
+  // Wiring: analog joystick drives the game's joy vector
+  ok(/function bindJoystick/.test(shellHtml), 'H: bindJoystick defined');
+  ok(/bindJoystick\('joyBase',\s*'joyNub'\)/.test(shellHtml), 'H: portrait joystick wired');
+  ok(/bindJoystick\('lJoyBase',\s*'lJoyNub'\)/.test(shellHtml), 'H: landscape joystick wired');
+  ok(/joy\.dx\s*=/.test(shellHtml) && /joy\.dy\s*=/.test(shellHtml), 'H: joystick writes joy.dx/joy.dy');
+  ok(/setPointerCapture/.test(shellHtml), 'H: pointer capture for multitouch drag');
+  ok(/maxR\s*\*\s*0\.18/.test(shellHtml), 'H: dead zone on travel radius');
+  ok(/lostpointercapture/.test(shellHtml), 'H: reset on lost pointer capture');
+  ok(/visibilitychange/.test(shellHtml) && /orientationchange/.test(shellHtml), 'H: reset on hide/rotate');
+  // Engine still merges analog joy with keyboard and normalizes (diagonals full speed)
+  const eng = fs.readFileSync(require('path').join(__dirname, 'game.html'), 'utf8');
+  ok(/joy\.id!==null\)\s*\{\s*mx\s*\+=\s*joy\.dx;\s*my\s*\+=\s*joy\.dy/.test(eng) ||
+     /if\s*\(\s*joy\.id\s*!==\s*null\s*\)\s*\{\s*mx\s*\+=\s*joy\.dx;\s*my\s*\+=\s*joy\.dy/.test(eng),
+     'H: engine merges joy vector into movement');
+  // Landscape canvas must be width-capped (aspect-safe), never height-capped:
+  // width:100% + height:auto + max-height squishes the 3:2 picture.
+  ok(!/#landScreenBox #game\{\s*max-height/.test(shellHtml), 'H: no height-clamp on landscape canvas (aspect would break)');
+  ok(/#landScreenBox #game\{\s*max-width:\s*calc\(\(100dvh - 210px\) \* 1\.5\)/.test(shellHtml),
+     'H: landscape canvas width-capped at 3:2 of the vertical budget');
+  ok(/#landScreenBox #game\{\s*max-width:\s*calc\(\(100dvh - 150px\) \* 1\.5\)/.test(shellHtml),
+     'H: compact landscape canvas width-capped at 3:2 of the vertical budget');
+  // Action buttons / captions unchanged
+  ok(/id="btnA"/.test(shellHtml) && /id="lStart"/.test(shellHtml), 'H: A/B/START/SELECT buttons kept');
+  ok(/>whistle</.test(shellHtml) && />stick</.test(shellHtml), 'H: whistle/stick captions kept');
+}
+
 // ================= summary =================
 console.log('\n==== RESULT: ' + pass + ' passed, ' + fail + ' failed ====');
 if (failures.length) { console.log('failures:'); failures.forEach(f => console.log(' - ' + f)); }

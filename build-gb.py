@@ -2,7 +2,7 @@
 """Build the deployable Trailbound Game Boy shell: inject game.html's JS into shell-template.html."""
 import re, pathlib
 
-base = pathlib.Path('/home/hatch/workspace/games/trailbound')
+base = pathlib.Path(__file__).resolve().parent
 game_html = (base / 'game.html').read_text()
 m = re.search(r'<script>([\s\S]*)</script>', game_html)
 assert m, 'no <script> block found in game.html'
@@ -22,6 +22,27 @@ new_fit = """// Shell owns layout: the canvas fills its Game Boy screen box via 
 function fitCanvas() { canvas.style.width = ''; canvas.style.height = ''; }"""
 assert old_fit in game_js, 'fitCanvas block not found - game.html changed?'
 game_js = game_js.replace(old_fit, new_fit)
+
+# GB shell build: the shell's analog joystick writes the game's joy vector,
+# so strip the on-canvas touch buttons and floating joystick from the
+# deployed build to avoid double input.
+# (game.html keeps them for standalone desktop play; verify.js is unaffected.)
+game_js = game_js.replace('"use strict";', '"use strict";\nconst GB_SHELL = true;', 1)
+old_touch = """  if (!isPlay()) return;
+  if (hitCircle(p, BTN_ACTION)) { doAction(); return; }
+  if (hitCircle(p, BTN_SWITCH)) { switchChar(); return; }
+  if (hitCircle(p, BTN_WHISTLE)) { whistle(); return; }
+  if (hitCircle(p, BTN_STICK)) { throwStick(); return; }
+  if (p.x < W / 2 && joy.id === null) {
+    joy.id = e.pointerId; joy.ox = p.x; joy.oy = p.y; joy.dx = 0; joy.dy = 0;
+  }"""
+new_touch = """  if (!isPlay()) return;
+  if (GB_SHELL) return; // shell buttons handle all play input (tap still advances intro/win/final)"""
+assert old_touch in game_js, 'touch input block not found - game.html changed?'
+game_js = game_js.replace(old_touch, new_touch)
+old_draw = "if (G.mode === 'play') drawTouch();"
+assert old_draw in game_js, 'drawTouch call not found - game.html changed?'
+game_js = game_js.replace(old_draw, "if (G.mode === 'play' && !GB_SHELL) drawTouch();")
 
 template = (base / 'shell-template.html').read_text()
 assert '/*__GAME_JS__*/' in template

@@ -1,0 +1,2261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
+<title>Trailbound</title>
+<style>
+  :root{
+    --ink:#e9f1ff; --bg:#0b1020;
+    /* GBC palette */
+    --gbc-aqua:#54C9C1; --gbc-aqua-dark:#3CA79F; --gbc-aqua-light:#7EDDD7;
+    --gbc-bezel:#0b0b0b; --gbc-screen:#222; --gbc-shadow:rgba(0,0,0,.45);
+    /* GBA palette */
+    --gba-body1:#5860A3; --gba-body2:#3F447D; --gba-body3:#2B2E57;
+    /* Buttons */
+    --btnA:#6C38FF; --btnB:#FF3B5C; --btnStart:#4a4a4a;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial;
+    overscroll-behavior:none; -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent;}
+  body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+
+  /* ===== Shared topbar ===== */
+  .topbar{display:flex;align-items:center;justify-content:space-between;
+    font-weight:800;letter-spacing:.08em;margin-bottom:10px;color:#dfe8ff}
+  .topbar .power{display:flex;gap:6px;align-items:center;color:#ddd;font-size:12px}
+  .topbar .led{width:10px;height:10px;border-radius:999px;
+    background:radial-gradient(circle at 30% 30%,#f66,#a11414);
+    box-shadow:0 0 10px #f33,inset 0 0 2px #fff}
+
+  /* ===== GBC Portrait Shell ===== */
+  .gbc-shell{
+    max-width:min(920px,96vw);
+    margin:14px auto;
+    padding:18px 18px 24px;
+    background:linear-gradient(160deg,var(--gbc-aqua-light),var(--gbc-aqua) 40%,var(--gbc-aqua-dark) 100%);
+    border-radius:22px;
+    box-shadow:0 18px 36px var(--gbc-shadow), inset 0 6px 0 rgba(255,255,255,.08), inset 0 -6px 0 rgba(0,0,0,.12);
+    border:2px solid rgba(0,0,0,.2);
+  }
+  .gbc-face{
+    background:linear-gradient(180deg,#1b1b1b,#111);
+    border-radius:16px; padding:16px;
+    box-shadow:inset 0 6px 14px rgba(0,0,0,.55);
+    color:#dfe8ff;
+  }
+  .gb-screen{
+    background:var(--gbc-bezel); border-radius:14px; padding:14px;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.05), inset 0 0 24px rgba(0,0,0,.8);
+  }
+  #canvasBox{background:var(--gbc-screen); border:1px solid rgba(255,255,255,.06); border-radius:10px; box-shadow: inset 0 0 24px rgba(0,0,0,.65); overflow:hidden}
+  #game{display:block; width:100%; height:auto; image-rendering:pixelated; background:#20314f; touch-action:none;}
+  .gb-screen::after{
+    content:""; display:block; width:120px; height:40px; margin:10px 0 0 auto;
+    background:
+      radial-gradient(circle at 6px 6px, rgba(0,0,0,.8) 3px, transparent 4px) 0 0/16px 16px,
+      radial-gradient(circle at 14px 14px, rgba(0,0,0,.8) 3px, transparent 4px) 0 0/16px 16px;
+    opacity:.45; filter:drop-shadow(0 1px 0 rgba(255,255,255,.05)); border-radius:6px;
+  }
+
+  /* Portrait controls */
+  #mobileControls{
+    display:grid;
+    grid-template-columns: 160px 1fr 160px;
+    grid-template-rows: auto auto;
+    gap:12px;
+    background:linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.15));
+    border:1px solid rgba(255,255,255,.06); border-radius:14px;
+    box-shadow: inset 0 8px 22px rgba(0,0,0,.5), 0 10px 22px rgba(0,0,0,.35);
+    padding:16px; margin-top:12px;
+  }
+  .joybase{grid-column:1; grid-row:1 / span 2; width:160px; height:160px; position:relative;
+        background:#0e0e14; border:1px solid #232323; border-radius:999px; box-shadow:inset 0 8px 18px rgba(0,0,0,.65);
+        touch-action:none; cursor:pointer}
+  .joybase::before{content:""; position:absolute; inset:14px; border-radius:999px;
+        border:1px dashed rgba(152,164,185,.28)}
+  .joynub{position:absolute; left:50%; top:50%; width:64px; height:64px; border-radius:999px;
+        transform:translate(-50%,-50%);
+        background:radial-gradient(circle at 35% 30%, #3a3f52, #171a24 70%);
+        border:1px solid #2a2e3d; box-shadow:0 6px 14px rgba(0,0,0,.5), inset 0 2px 4px rgba(255,255,255,.12);
+        pointer-events:none}
+  .joybase.active{box-shadow:inset 0 8px 18px rgba(0,0,0,.65), 0 0 0 2px rgba(122,162,255,.35)}
+  .joybase.active .joynub{filter:brightness(1.35)}
+
+  .actCluster{grid-column:3; grid-row:1; width:140px; height:120px; position:relative; margin:auto}
+  .actCluster .btn{position:absolute; width:56px; height:56px; border-radius:999px; border:1px solid #1b2a52; color:#e9f1ff; font-weight:800; font-size:16px; box-shadow:inset 0 8px 18px rgba(0,0,0,.45); touch-action:manipulation}
+  #btnA{background:var(--btnA); right:6px; top:8px}
+  #btnB{background:var(--btnB); left:16px; bottom:6px}
+  .startRow{grid-column:3; grid-row:2; display:flex; justify-content:center; gap:12px; align-items:center}
+  .startRow .tiny{min-width:auto; width:72px; height:32px; border-radius:999px; background:var(--btnStart); border:1px solid #222; color:white; font-weight:800; letter-spacing:.06em; font-size:12px; touch-action:manipulation}
+
+  /* ===== GBA Landscape Shell ===== */
+  .gba-shell{ display:none; }
+  .gba-body{
+    width:min(98vw,1200px);
+    margin:10px auto;
+    padding:18px;
+    border-radius:42px;
+    background:linear-gradient(160deg,var(--gba-body1),var(--gba-body2) 55%,var(--gba-body3));
+    box-shadow: 0 20px 40px rgba(0,0,0,.55), inset 0 12px 22px rgba(255,255,255,.08), inset 0 -14px 28px rgba(0,0,0,.35);
+    border:2px solid rgba(0,0,0,.28);
+  }
+  .gba-topbar{margin-bottom:12px;}
+  .gba-tray{
+    background:rgba(0,0,0,.18);
+    border-radius:28px;
+    padding:14px;
+    box-shadow: inset 0 8px 24px rgba(0,0,0,.45), inset 0 -6px 18px rgba(255,255,255,.05);
+  }
+  #landscapeRow{
+    display:grid;
+    grid-template-columns: 172px 1fr 160px;
+    gap:14px;
+    align-items:center;
+  }
+
+  .joybase.land-joy{ width:172px; height:172px; position:relative; margin:auto;
+              background:#0e0e14; border:1px solid #232323; border-radius:999px; box-shadow:inset 0 8px 18px rgba(0,0,0,.65);
+              touch-action:none; cursor:pointer}
+  .joybase.land-joy::before{content:""; position:absolute; inset:14px; border-radius:999px;
+              border:1px dashed rgba(152,164,185,.28)}
+  .joybase.land-joy .joynub{ width:68px; height:68px }
+
+  .land-screen-bezel{background:#0f1116;border-radius:18px;padding:12px;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.05), inset 0 0 28px rgba(0,0,0,.75);}
+  .land-screen{ background:#141824; border-radius:12px; padding:8px; box-shadow: inset 0 0 24px rgba(0,0,0,.55); }
+  #landScreenBox{ border:1px solid #2a2a2a; border-radius:8px; overflow:hidden; background:#20314f;
+    display:flex; justify-content:center; align-items:center; }
+  /* Cap the WIDTH (not the height) so the canvas keeps its 3:2 ratio:
+     width:100% + height:auto + a max-height clamp squishes the picture
+     (height gets capped while width stays wide). (100dvh-210px)*1.5 is the
+     widest 3:2 box that still fits vertically. */
+  #landScreenBox #game{ max-width: calc((100dvh - 210px) * 1.5); }
+
+  /* Pressed-button feedback */
+  .actCluster .btn.pressed, .ab .btn.pressed{ filter:brightness(1.45); }
+  .tiny.pressed{ filter:brightness(1.7); }
+
+  /* START/SELECT captions */
+  .pillWrap{ display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .pillWrap span{ font-size:10px; letter-spacing:.1em; color:#aeb9d6; font-weight:700; text-transform:uppercase; }
+
+  /* Compact landscape for short phone screens */
+  @media (orientation: landscape) and (max-height: 520px){
+    .gba-body{ padding:10px; border-radius:28px; margin:6px auto; }
+    .gba-topbar{ margin-bottom:6px; }
+    .gba-tray{ padding:8px; border-radius:20px; }
+    #landscapeRow{ grid-template-columns: 120px 1fr 112px; gap:8px; }
+    .joybase.land-joy{ width:120px; height:120px; }
+    .joybase.land-joy::before{ inset:10px; }
+    .joybase.land-joy .joynub{ width:46px; height:46px; }
+    .land-actions{ gap:8px; }
+    .land-actions .ab{ width:112px; height:96px; }
+    .land-actions .ab .btn{ width:44px; height:44px; font-size:13px; }
+    #landScreenBox #game{ max-width: calc((100dvh - 150px) * 1.5); }
+  }
+
+  .land-actions{ display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .land-actions .ab{ position:relative; width:160px; height:132px; }
+  .land-actions .ab .btn{ position:absolute; width:60px; height:60px; border-radius:999px; border:1px solid #1b2a52; color:#e9f1ff; font-weight:800; font-size:16px; box-shadow:inset 0 8px 18px rgba(0,0,0,.45); touch-action:manipulation }
+  #lA{ background:var(--btnA); right:6px; top:6px }
+  #lB{ background:var(--btnB); left:14px; bottom:8px }
+  .land-actions .start{ display:flex; gap:10px; }
+  .land-actions .start .tiny{ min-width:auto; width:72px; height:32px; border-radius:999px; background:var(--btnStart); border:1px solid #222; color:white; font-weight:800; font-size:12px; touch-action:manipulation }
+
+  /* ===== Mode switching ===== */
+  /* GBA landscape shell: phones/tablets in landscape. The width cap covers
+     small phones; pointer:coarse covers big phones (Pro Max landscape is
+     956px wide, past the old 940px cap). */
+  @media (orientation: landscape) and (max-width: 940px),
+         (orientation: landscape) and (pointer: coarse){
+    .gbc-shell{ display:none !important; }
+    .gba-shell{ display:block; }
+  }
+  /* Desktop / mouse-driven: GBC shell, no touch buttons */
+  @media (min-width: 941px) and (orientation: portrait),
+         (min-width: 941px) and (pointer: fine){
+    .gba-shell{ display:none !important; }
+    #mobileControls{ display:none; }
+  }
+</style>
+</head>
+<body>
+  <!-- PORTRAIT -->
+  <div class="gbc-shell">
+    <div class="gbc-face">
+      <div class="topbar">
+        <span>TRAILBOUND</span>
+        <span class="power"><span class="led"></span>POWER</span>
+      </div>
+      <div class="gb-screen">
+        <div id="canvasBox">
+          <canvas id="game" width="960" height="640"></canvas>
+        </div>
+      </div>
+      <div id="mobileControls">
+        <div class="joybase" id="joyBase"><div class="joynub" id="joyNub"></div></div>
+        <div></div>
+        <div class="actCluster">
+          <button class="btn" id="btnA">A</button>
+          <button class="btn" id="btnB">B</button>
+        </div>
+        <div></div>
+        <div class="startRow">
+          <div class="pillWrap"><button class="tiny" id="btnStart">START</button><span>whistle</span></div>
+          <div class="pillWrap"><button class="tiny" id="btnSelect">SELECT</button><span>stick</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LANDSCAPE -->
+  <div class="gba-shell">
+    <div class="gba-body">
+      <div class="topbar gba-topbar">
+        <span>TRAILBOUND</span>
+        <span class="power"><span class="led"></span>POWER</span>
+      </div>
+      <div class="gba-tray">
+        <div id="landscapeRow">
+          <!-- Joystick -->
+          <div class="joybase land-joy" id="lJoyBase"><div class="joynub" id="lJoyNub"></div></div>
+          <!-- Screen -->
+          <div class="land-screen-bezel">
+            <div class="land-screen">
+              <div id="landScreenBox"></div>
+            </div>
+          </div>
+          <!-- Actions -->
+          <div class="land-actions">
+            <div class="ab">
+              <button class="btn" id="lA">A</button>
+              <button class="btn" id="lB">B</button>
+            </div>
+            <div class="start">
+              <div class="pillWrap"><button class="tiny" id="lStart">START</button><span>whistle</span></div>
+              <div class="pillWrap"><button class="tiny" id="lSelect">SELECT</button><span>stick</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+
+"use strict";
+const GB_SHELL = true;
+/* ============================================================
+   TRAILBOUND — a 2D top-down puzzle-adventure.
+   Theo (boy) & Pip (dog) search for Grandfather's lost compass.
+   Single file, canvas primitives only, no external assets.
+   ============================================================ */
+
+// ---------- Constants ----------
+const TILE = 48, COLS = 20, ROWS = 12;
+const W = 960, H = 640, HUD_H = 64, PLAY_H = 576;
+const THEO_SPEED = 152, PIP_SPEED = 196, BADGER_SPEED = 118;
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+// Shell owns layout: the canvas fills its Game Boy screen box via CSS (width:100%).
+function fitCanvas() { canvas.style.width = ''; canvas.style.height = ''; }
+
+// ---------- Audio (all synthesized, WebAudio, no files) ----------
+const AU = {
+  ctx: null,
+  init() {
+    if (!this.ctx) {
+      try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { this.ctx = null; }
+    }
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+  },
+  tone(freq, dur, type, vol, slideTo, delay) {
+    if (!this.ctx) return;
+    type = type || 'sine'; vol = vol || 0.2; delay = delay || 0;
+    const t = this.ctx.currentTime + delay;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(Math.max(20, freq), t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.ctx.destination);
+    o.start(t); o.stop(t + dur + 0.05);
+  },
+  noise(dur, freq, vol, delay, type) {
+    if (!this.ctx) return;
+    freq = freq || 1000; vol = vol || 0.2; delay = delay || 0; type = type || 'lowpass';
+    const t = this.ctx.currentTime + delay;
+    const len = Math.max(1, Math.floor(this.ctx.sampleRate * dur));
+    const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = this.ctx.createBufferSource(); src.buffer = buf;
+    const f = this.ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(this.ctx.destination);
+    src.start(t); src.stop(t + dur + 0.05);
+  },
+  bark()   { this.tone(185, 0.09, 'square', 0.22, 120); this.tone(165, 0.10, 'square', 0.22, 105, 0.12); },
+  pickup() { const self = this; [523, 659, 784].forEach(function (f, i) { self.tone(f, 0.12, 'sine', 0.20, null, i * 0.07); }); },
+  lever()  { this.noise(0.09, 750, 0.30); this.tone(95, 0.16, 'sine', 0.35, 48, 0.05); },
+  dig()    { const self = this; for (let i = 0; i < 3; i++) { self.tone(120, 0.09, 'sine', 0.30, 55, i * 0.19); self.noise(0.06, 480, 0.16, i * 0.19); } },
+  splash() { this.noise(0.32, 1300, 0.16, 0, 'bandpass'); },
+  rope()   { this.tone(280, 0.28, 'sine', 0.20, 720); this.noise(0.15, 900, 0.08, 0.05); },
+  switchS(){ this.noise(0.16, 2400, 0.14, 0, 'highpass'); this.tone(500, 0.10, 'sine', 0.10, 900); },
+  stick()  { this.noise(0.22, 1600, 0.16, 0, 'bandpass'); },
+  grumble(){ this.tone(72, 0.5, 'sawtooth', 0.28, 48); this.tone(56, 0.5, 'sawtooth', 0.22, 38, 0.06); },
+  win()    { const self = this; [523, 587, 659, 784].forEach(function (f, i) { self.tone(f, 0.20, 'triangle', 0.24, null, i * 0.14); }); },
+  unlock() { this.tone(210, 0.09, 'square', 0.18, 320); this.tone(420, 0.14, 'square', 0.18, 640, 0.10); },
+  sign()   { this.tone(440, 0.09, 'sine', 0.14); this.tone(660, 0.09, 'sine', 0.12, null, 0.08); },
+  thump()  { this.tone(100, 0.10, 'sine', 0.25, 55); }
+};
+
+// ---------- Input: keyboard ----------
+const keys = {};
+function isPlay() { return G && G.mode === 'play'; }
+window.addEventListener('keydown', function (e) {
+  AU.init();
+  const k = e.key.toLowerCase();
+  if (e.key === 'Tab') e.preventDefault();
+  if (e.key === ' ') e.preventDefault();
+  keys[k] = true; keys[e.key] = true;
+  if (!G) return;
+  if (G.mode === 'intro' && (e.key === ' ' || e.key === 'Enter')) { startPlay(); return; }
+  if (G.mode === 'win' && (e.key === ' ' || e.key === 'Enter')) { nextLevel(); return; }
+  if (G.mode === 'final' && (e.key === ' ' || e.key === 'Enter')) { restartGame(); return; }
+  if (!isPlay()) return;
+  if (e.key === ' ') doAction();
+  else if (e.key === 'Tab') switchChar();
+  else if (k === 'f') whistle();
+  else if (k === 'x') throwStick();
+});
+window.addEventListener('keyup', function (e) {
+  keys[e.key.toLowerCase()] = false; keys[e.key] = false;
+});
+window.addEventListener('blur', function () { for (const k in keys) keys[k] = false; });
+
+// ---------- Input: pointer (touch + mouse) ----------
+const BTN_ACTION = { x: 872, y: 556, r: 42, label: 'ACTION' };
+const BTN_SWITCH = { x: 768, y: 566, r: 42, label: 'SWITCH' };
+const BTN_WHISTLE = { x: 872, y: 460, r: 28, label: 'WHISTLE' };
+const BTN_STICK = { x: 780, y: 470, r: 28, label: 'STICK' };
+const BTN_NEXT = { x: 480, y: 452, w: 220, h: 58 };
+const BTN_AGAIN = { x: 480, y: 500, w: 220, h: 58 };
+const joy = { id: null, ox: 0, oy: 0, dx: 0, dy: 0 };
+
+function toCanvas(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
+}
+function hitCircle(p, b) { const dx = p.x - b.x, dy = p.y - b.y; return dx * dx + dy * dy <= b.r * b.r; }
+function hitRect(p, b) { return Math.abs(p.x - b.x) <= b.w / 2 && Math.abs(p.y - b.y) <= b.h / 2; }
+
+canvas.addEventListener('pointerdown', function (e) {
+  AU.init();
+  e.preventDefault();
+  const p = toCanvas(e);
+  if (!G) return;
+  if (G.mode === 'intro') { startPlay(); return; }
+  if (G.mode === 'win') { if (hitRect(p, BTN_NEXT)) nextLevel(); return; }
+  if (G.mode === 'final') { if (hitRect(p, BTN_AGAIN)) restartGame(); return; }
+  if (!isPlay()) return;
+  if (GB_SHELL) return; // shell buttons handle all play input (tap still advances intro/win/final)
+});
+canvas.addEventListener('pointermove', function (e) {
+  if (e.pointerId !== joy.id) return;
+  const p = toCanvas(e);
+  let dx = p.x - joy.ox, dy = p.y - joy.oy;
+  const d = Math.hypot(dx, dy), max = 52;
+  if (d > max) { dx = dx / d * max; dy = dy / d * max; }
+  joy.dx = dx / max; joy.dy = dy / max;
+});
+function joyEnd(e) {
+  if (e.pointerId === joy.id) { joy.id = null; joy.dx = 0; joy.dy = 0; }
+}
+canvas.addEventListener('pointerup', joyEnd);
+canvas.addEventListener('pointercancel', joyEnd);
+document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+document.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+// ==================== LEVELS ====================
+// __LEVELS_START__
+const LEVELS = [
+{
+  name: "First Steps",
+  intro: "Theo and Pip set out at dawn. The old trailhead is quiet — time to stretch their legs.",
+  map: [
+    "####################",
+    "#P..p....FF....T...#",
+    "#..................#",
+    "#..S...............#",
+    "#.......FF.........#",
+    "#..T...............#",
+    "#..........S.......#",
+    "#....FF............#",
+    "#..................#",
+    "#.........E........#",
+    "#..................#",
+    "####################"
+  ],
+  signs: {
+    "3,3": "Walk with WASD / arrows, or the joystick.",
+    "11,6": "TAB (or SWITCH) swaps between Theo and Pip. Pip follows you — F toggles stay!"
+  },
+  leverDoor: false,
+  relic: false,
+  solution: [
+    "Walk Theo (starts at 1,1) with WASD / arrows; collect the 6 fireflies by walking over them.",
+    "Press TAB (or the SWITCH button) to control Pip (starts at 4,1). Pip runs faster than Theo.",
+    "Press F (or WHISTLE) to toggle Pip between follow and stay; in follow mode Pip trails Theo, in stay mode he sits.",
+    "As Theo, stand next to a signpost and press SPACE to read its hint.",
+    "Walk both Theo and Pip onto the campsite tile E at (10,9). With both on E, the trail completes."
+  ]
+},
+{
+  name: "The Old Burrow",
+  intro: "A thick wall splits the meadow. The gap is Pip-sized — and something glints on the far side.",
+  map: [
+    "####################",
+    "#P......#..........#",
+    "#..S....#....#.....#",
+    "#..F....#...#V#....#",
+    "#.......#....=.....#",
+    "#.......d....=.....#",
+    "#.......#....=..F..#",
+    "#..F....#....=.....#",
+    "#.......#...p=.....#",
+    "#.......#....E.....#",
+    "#.......#..........#",
+    "####################"
+  ],
+  signs: {
+    "3,2": "Some paths are Pip-sized. Switch with TAB!"
+  },
+  leverDoor: true,
+  relic: false,
+  solution: [
+    "Press TAB to control Pip at (12,8). Walk east onto the tunnel tile at (13,8).",
+    "Move Pip up through the tunnel: (13,7), (13,6), (13,5), (13,4), to the lever at (13,3).",
+    "Press SPACE (ACTION): the lever flips with a clunk and the door at (8,5) swings open.",
+    "Walk Pip back down the tunnel to (12,8).",
+    "Press TAB to control Theo at (1,1). Walk east to the open door (8,5) and through to (9,5).",
+    "Walk Theo (12,5) -> (12,9) -> (13,9), stepping around the tunnel tiles which block Theo.",
+    "Walk Pip to (13,9). With both on the campsite E, the trail completes."
+  ]
+},
+{
+  name: "High Ledge",
+  intro: "The high camp sits on a cliff. Ladders are boy-sized; poor Pip needs another way up.",
+  map: [
+    "####################",
+    "#P..p.....F........#",
+    "#..S..######.......#",
+    "#.....#....#...T...#",
+    "#.....L...E#.......#",
+    "#.....#.A..#...F...#",
+    "#.....######.......#",
+    "#..........F.......#",
+    "#..F...............#",
+    "#..................#",
+    "#..................#",
+    "####################"
+  ],
+  signs: {
+    "3,2": "Ladders are boy-sized. Drop your rope from the anchor so Pip can climb!"
+  },
+  rope: { ax: 8, ay: 5, tx: 8, ty: 6 },
+  leverDoor: false,
+  relic: false,
+  solution: [
+    "Control Theo at (1,1). Walk to the ladder tile L at (6,4) on the plateau's west wall.",
+    "Step east onto L (boy-only), then east again to (7,4) inside the plateau.",
+    "Walk to the rope anchor A at (8,5) and press SPACE: Theo drops a rope to (8,6), which becomes walkable.",
+    "Press TAB to control Pip at (4,1). Walk to (8,7), then north onto the rope tile (8,6), then (8,5).",
+    "Walk both Theo and Pip to the campsite E at (10,4). Trail complete."
+  ]
+},
+{
+  name: "Badger's Nap",
+  intro: "A badger naps in the only passage north. It guards the old cache — and it naps light.",
+  map: [
+    "####################",
+    "#......F.....R...F.#",
+    "#########.##########",
+    "#...F.TTT.TTT......#",
+    "#..W..TT...TT...F..#",
+    "#.WFW..T.B..T......#",
+    "#.WWW.TT...TT......#",
+    "#.....TTT.TTT...S..#",
+    "#P..p....F.........#",
+    "#................E.#",
+    "#..................#",
+    "####################"
+  ],
+  signs: {
+    "16,7": "Badgers nap light. Bark (SPACE as Pip) to lure him off — then RUN, Theo!"
+  },
+  leverDoor: false,
+  relic: true,
+  solution: [
+    "(Optional) Control Pip and swim in the pond (tiles x2-4, y5-6) to grab the firefly at (3,5); water blocks Theo.",
+    "Control Pip. Walk to (9,8) south of the napping badger at (9,5) and press SPACE to bark.",
+    "The badger grows curious, waddles to (9,8), and sniffs for 6 seconds, ignoring Theo.",
+    "Press TAB to control Theo at (1,8). Run north through the passage: (9,7), (9,6), (9,5), (9,4), (9,3), (9,2), (9,1).",
+    "Walk east along row 1 to the relic R at (13,1); Theo picks it up.",
+    "Run back south through the passage (the badger is sniffing or waddling home and ignores Theo) to (9,8), then east to the campsite E at (17,9).",
+    "Walk Pip to E at (17,9). Both on E with the relic: trail complete. (If the badger tags Theo, Theo resets to (1,8) but keeps fireflies and the relic.)"
+  ]
+},
+{
+  name: "The Compass Vault",
+  intro: "The vault of the compass. Dig, unlock, distract, climb — everything they've learned, all at once.",
+  map: [
+    "####################",
+    "#.....#F....#.F....#",
+    "#.....#..#..#.####.#",
+    "#.....#.#V#.#.L.R#.#",
+    "#.....#..=..#.#A.#.#",
+    "#.....#..=..#.####.#",
+    "#F..S.#..=..#......#",
+    "#.D...#..=..#......#",
+    "#.hh..G...B.d......#",
+    "#.P.p.#.....#......#",
+    "#F....#.....#...E..#",
+    "####################"
+  ],
+  signs: {
+    "4,6": "Pip can smell hidden trails. Follow the paw prints, then dig with SPACE!"
+  },
+  rope: { ax: 15, ay: 4, tx: 15, ty: 5 },
+  leverDoor: true,
+  relic: true,
+  solution: [
+    "Control Pip at (4,9). Follow the hidden scent trail: walk within 3 tiles of the h tiles at (3,8), (2,8) to reveal paw prints leading to the dig mound D at (2,7).",
+    "Stand on (or next to) D and press SPACE: three thumps, dust, and a rusty key pops out at (2,6).",
+    "Press TAB to control Theo at (2,9). Walk to (2,6) to pick up the key (key icon appears in the HUD).",
+    "Walk Theo east to the locked gate G at (6,8) and walk into it: it unlocks into grass.",
+    "Control Pip, walk through the gate to (8,7), and press SPACE to bark. The badger at (10,8) grows curious and waddles to (8,7) to sniff for 6 seconds.",
+    "Walk Pip north into the tunnel at (9,7), up through (9,6), (9,5), (9,4) to the lever V at (9,3). Press SPACE: the door d at (12,8) opens.",
+    "Walk Pip back down the tunnel into the central corridor.",
+    "Control Theo. Cross the corridor (the badger is distracted, or outrun it — Theo is faster) to (11,8), then east through the open door (12,8) to (13,8).",
+    "Walk Theo north to the ladder L at (14,3), step on, then east to (15,3) atop the plateau.",
+    "Walk to the anchor A at (15,4) and press SPACE: the rope drops to (15,5), making it walkable.",
+    "Control Pip. Walk through the door to the east side, to (15,6), then climb the rope: (15,5), (15,4).",
+    "Control Theo. Walk to the compass R at (16,3) to pick it up.",
+    "Walk both Theo and Pip to the campsite E at (16,10). Both on E with the compass: finale complete."
+  ]
+},
+{
+  name: "Stone and Weight",
+  intro: "The Grey Peaks begin with a lesson in weight. Copper doors, stone plates — and something heavy to hold them.",
+  map: [
+    "####################",
+    "#P...p.............#",
+    "#......S...........#",
+    "#..................#",
+    "#........o.C.....S.#",
+    "#..................#",
+    "##########q#########",
+    "#..................#",
+    "#......F.....F.....#",
+    "#.........E........#",
+    "#..................#",
+    "####################"
+  ],
+  signs: {
+    "7,2": "Copper doors open while a stone plate is held down. Stand on one — step off, and it shuts!",
+    "17,4": "Too heavy to carry — but Theo can push crates. Pip, sadly, cannot."
+  },
+  leverDoor: false,
+  plateDoor: true,
+  relic: false,
+  solution: [
+    "Control Theo at (1,1). Walk to the stone plate o at (9,4) and stand on it: the copper door q at (10,6) swings open.",
+    "Walk south toward the door — the moment Theo steps off the plate, the door shuts. Plates only hold while pressed.",
+    "Read the sign at (17,4), then walk Theo to (12,4), east of the crate at (11,4).",
+    "Push west twice: the crate slides (11,4) -> (10,4) -> (9,4), landing on the plate. The copper door opens and STAYS open.",
+    "Walk Theo south through the open door (10,6) to the campsite E at (10,9) (grab the fireflies at (7,8) and (13,8) on the way if you like).",
+    "Press TAB to control Pip at (5,1). Walk Pip south through the still-open door to E at (10,9). Both on E: trail complete."
+  ]
+},
+{
+  name: "The Frozen Path",
+  intro: "A frozen lake bars the way. Something glints on the island mid-lake — one of Grandfather's old trail markers. Theo can't walk on ice. He can only slide.",
+  map: [
+    "####################",
+    "#P..p....S.........#",
+    "#..................#",
+    "#..................#",
+    "#..~~~~~~~~~T~~~~..#",
+    "#..~~~~~~~~~R~~~~..#",
+    "#..~~~F~~~~~~~~~~..#",
+    "#..~~~~~~~~~~~~~~..#",
+    "#..............E...#",
+    "#.....F............#",
+    "#..................#",
+    "####################"
+  ],
+  signs: {
+    "9,1": "Theo can't walk on ice — he slides until he hits an island or a shore! Plan each slide."
+  },
+  leverDoor: false,
+  plateDoor: false,
+  relic: true,
+  solution: [
+    "Control Theo at (1,1). Walk to the north shore at (5,3).",
+    "Step south onto the ice at (5,4): Theo slides south down the whole column and lands on the south shore at (5,8).",
+    "(Optional) Walk west to (6,8), step north onto the ice at (6,7): Theo slides north onto the little island at (6,6) and grabs the firefly. Step south onto (6,7) to slide back to (6,8).",
+    "Walk east along the south shore to (12,8). Step north onto the ice at (12,7): Theo slides north up the column and stops on the island at (12,5), picking up the trail marker R.",
+    "Step south onto the ice at (12,6): Theo slides back down to the south shore at (12,8).",
+    "Walk east to the campsite E at (15,8). Press TAB to control Pip at (4,1) and walk him straight south across the ice (Pip is sure-footed, no sliding) to E. Both on E with the marker: trail complete."
+  ]
+},
+{
+  name: "The Peak Badger",
+  intro: "The high pass narrows. A badger naps across the only path — and this one is fast. Faster than Theo.",
+  map: [
+    "####################",
+    "#..................#",
+    "#..................#",
+    "#.##################",
+    "#.........B.....R..#",
+    "#................E.#",
+    "#.##################",
+    "#..................#",
+    "#P..p....S.........#",
+    "#..................#",
+    "#..................#",
+    "####################"
+  ],
+  signs: {
+    "9,8": "This badger is FAST — faster than Theo! Don't try to outrun it. Bark (SPACE as Pip) to lure it away, then cross while it sniffs."
+  },
+  leverDoor: false,
+  plateDoor: false,
+  relic: true,
+  badgerFast: true,
+  solution: [
+    "Press TAB to control Pip at (5,8). Walk north through the gap at (1,6): (5,8) -> (1,8) -> (1,7) -> (1,6) -> (1,5) -> (1,4), then east along row 4 to (6,4). (The napping badger only wakes for Theo — Pip strolls past safely.)",
+    "Press SPACE to bark. The badger at (10,4) is 4 tiles away — it grows curious, waddles to (6,4), and sniffs for 6 seconds, ignoring Theo.",
+    "Press TAB to control Theo at (1,8). While the badger is distracted, run north: (1,7) -> (1,6) -> (1,5), then east along row 5 to (16,5).",
+    "Step north to the relic R at (16,4) to pick it up, then step south-east to the campsite E at (17,5).",
+    "Walk Pip east along rows 4-5 to E at (17,5) — the badger ignores Pip even after it wakes. Both on E with the relic: trail complete. (If the badger tags Theo, Theo restarts at (1,8) keeping the relic — bark again and go.)"
+  ]
+},
+{
+  name: "The Long Climb",
+  intro: "The compass points up — the Grey Peaks, and the longest climb yet. Ice, burrow, lever, rope, and weight: everything they've learned, all in one trail.",
+  map: [
+    "####################",
+    "#P...p....S......F.#",
+    "#..................#",
+    "#~~~~~~~~~~~~~~~~~~#",
+    "#~~~~~~~~~F~~~~~~~~#",
+    "#..................#",
+    "#####d######===#####",
+    "#.........A..V.....#",
+    "####################",
+    "#.............######",
+    "#..S....o...C.q.E..#",
+    "####################"
+  ],
+  signs: {
+    "10,1": "The long climb: ice, burrow, lever, rope, and weight — everything they've learned, all in one trail.",
+    "3,10": "The copper door only stays open while the stone plate is held. Crates are heavy — good thing Theo can push."
+  },
+  rope: { ax: 10, ay: 7, tx: 10, ty: 8 },
+  leverDoor: true,
+  plateDoor: true,
+  relic: false,
+  solution: [
+    "Control Theo at (1,1). Walk to (10,2) and step south onto the ice at (10,3): Theo slides south, grabbing the firefly at (10,4), and lands on the south shore at (10,5).",
+    "Press TAB to control Pip at (5,1). Walk Pip south across the ice (Pip doesn't slide) to (12,5), then south through the burrow: (12,6) -> (13,6) -> (14,6) -> (14,7).",
+    "Walk Pip onto the lever V at (13,7) and press SPACE: the stone door d at (5,6) swings open for good.",
+    "Press TAB to control Theo. Walk west to (5,5), south through the open door (5,6) to (5,7), then east to the rope anchor A at (10,7) and press SPACE: the rope drops to (10,8).",
+    "Climb down (10,8) -> (10,9) -> (10,10). Press TAB and bring Pip down the rope too — park him clear of the crate's path, e.g. at (2,10).",
+    "Control Theo. Walk east to (13,10), then push the crate west four tiles: (12,10) -> (11,10) -> (10,10) -> (9,10) -> (8,10), landing on the stone plate. The copper door q at (14,10) swings open and stays open.",
+    "Walk Theo east through the open copper door to the campsite E at (16,10). Walk Pip to E. Both on E: trail complete."
+  ]
+},
+{
+  name: "The Last Campsite",
+  intro: "The compass needle holds steady — north-east, to the last ridge. Grandfather's marker is close. Pip walks a little nearer than usual.",
+  map: [
+    "####################",
+    "#P...p....S........#",
+    "#..................#",
+    "#~~~~~~~~~~~~~~~~~~#",
+    "#~~~~~~~~F~~~~~~~~~#",
+    "#..................#",
+    "#..S..o............#",
+    "#########q##########",
+    "#..........C..o....#",
+    "#..................#",
+    "#.....F.....R..E.S.#",
+    "####################"
+  ],
+  signs: {
+    "10,1": "The compass needle holds steady now. North-east — to the last ridge.",
+    "3,6": "This door needs two. Park Pip on the plate (F = stay), then send Theo through — there's a crate on the far side.",
+    "17,10": "If you're reading this, you walked the last trail. The map is finished, and so is my worry. Rest now. — G."
+  },
+  leverDoor: false,
+  plateDoor: true,
+  relic: true,
+  solution: [
+    "Control Theo at (1,1). Walk to (9,2) and step south onto the ice at (9,3): Theo slides south, grabbing the firefly at (9,4), and lands on the south shore at (9,5).",
+    "Press TAB to control Pip at (5,1). Walk Pip south across the tarn to the stone plate o at (6,6), then press F: Pip sits and stays, holding the plate down.",
+    "Press TAB to control Theo. The copper door q at (9,7) stands open while Pip holds the plate — walk south through it: (9,6) -> (9,7) -> (9,8).",
+    "Walk Theo to (10,8) and push the crate east three tiles: (11,8) -> (12,8) -> (13,8) -> (14,8), landing on the far plate. The door stays open on the crate's weight.",
+    "Press TAB to control Pip, press F (follow), and walk Pip south through the still-open door to join Theo.",
+    "Walk both south to the last ridge. Theo picks up Grandfather's marker R at (12,10). Read the signpost at (17,10).",
+    "Walk both Theo and Pip onto the campsite E at (15,10). Both on E with the marker: the map is finished."
+  ]
+}
+];
+// __LEVELS_END__
+
+// ==================== GAME STATE ====================
+let G = null;
+
+function newChar(who, tx, ty, speed) {
+  const cx = tx * TILE + TILE / 2, cy = HUD_H + ty * TILE + TILE / 2;
+  return {
+    who: who, x: cx, y: cy, r: 13, speed: speed,
+    face: { x: 0, y: 1 }, moving: false, sit: false,
+    homeTx: tx, homeTy: ty,
+    inWater: false, stepT: 0
+  };
+}
+
+function loadLevel(idx) {
+  const L = LEVELS[idx];
+  const grid = L.map.map(function (row) { return row.split(''); });
+  G = {
+    mode: 'intro', levelIndex: idx,
+    grid: grid,
+    theo: null, pip: null, badger: null,
+    crates: [],
+    controlled: 'theo', pipFollow: true,
+    fireflyCount: 0,
+    hasKey: false, hasRelic: false,
+    doorOpen: false, leverOn: false, plateOpen: false,
+    ropeDown: false, slide: null,
+    dug: {}, revealedH: {},
+    particles: [],
+    stick: null, pipTarget: null,
+    signText: null, signTimer: 0,
+    flash: 0, time: 0,
+    P: null
+  };
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      const ch = grid[y][x];
+      if (ch === 'P') { G.theo = newChar('theo', x, y, THEO_SPEED); G.P = [x, y]; grid[y][x] = '.'; }
+      else if (ch === 'p') { G.pip = newChar('pip', x, y, PIP_SPEED); grid[y][x] = '.'; }
+      else if (ch === 'B') { G.badger = newBadger(x, y); grid[y][x] = '.'; }
+      else if (ch === 'C') { G.crates.push({ tx: x, ty: y }); grid[y][x] = '.'; }
+    }
+  }
+}
+
+function newBadger(tx, ty) {
+  const cx = tx * TILE + TILE / 2, cy = HUD_H + ty * TILE + TILE / 2;
+  return {
+    x: cx, y: cy, r: 14,
+    homeTx: tx, homeTy: ty,
+    state: 'nap',           // nap, chase, curious, sniff, return
+    path: [], pathI: 0,
+    sniffT: 0, repathT: 0, giveupT: 0,
+    barkTx: 0, barkTy: 0,
+    face: { x: 1, y: 0 },
+    wob: Math.random() * 6.28
+  };
+}
+
+function startPlay() { if (G) G.mode = 'play'; }
+let bankedFireflies = 0;
+function nextLevel() {
+  bankedFireflies += G.fireflyCount;
+  if (G.levelIndex + 1 < LEVELS.length) { loadLevel(G.levelIndex + 1); G.mode = 'play'; }
+  else { G.mode = 'final'; }
+}
+function restartGame() { bankedFireflies = 0; loadLevel(0); G.mode = 'play'; }
+function totalFireflies() { return bankedFireflies + (G ? G.fireflyCount : 0); }
+// ==================== TILE HELPERS ====================
+function inBounds(tx, ty) { return tx >= 0 && ty >= 0 && tx < COLS && ty < ROWS; }
+function tileOf(px, py) { return [Math.floor(px / TILE), Math.floor((py - HUD_H) / TILE)]; }
+function tileCenter(tx, ty) { return [tx * TILE + TILE / 2, HUD_H + ty * TILE + TILE / 2]; }
+function tileChar(tx, ty) { return inBounds(tx, ty) ? G.grid[ty][tx] : '#'; }
+
+// Grid-only solidity (ignores crates & characters).
+function gridSolid(tx, ty, who) {
+  if (!inBounds(tx, ty)) return true;
+  const L = LEVELS[G.levelIndex];
+  if (L.rope && tx === L.rope.tx && ty === L.rope.ty) return !G.ropeDown;
+  const ch = G.grid[ty][tx];
+  if (ch === '#' || ch === 'T') return true;
+  if (ch === 'W') return who !== 'pip';
+  if (ch === '=') return who !== 'pip';
+  if (ch === 'L') return who !== 'theo';
+  if (ch === 'G') return true;   // unlocked -> grid becomes '.'
+  if (ch === 'd') return !G.doorOpen;
+  if (ch === 'q') return !G.plateOpen; // pressure door: plates only (Pack 2)
+  return false;
+}
+function solidAt(tx, ty, who) {
+  if (gridSolid(tx, ty, who)) return true;
+  for (const c of G.crates) if (c.tx === tx && c.ty === ty) return true;
+  return false;
+}
+// Pressure plate (tile 'o'): pressed while a crate sits on it, or Theo or Pip stands on it.
+function platePressed(tx, ty) {
+  for (const cr of G.crates) if (cr.tx === tx && cr.ty === ty) return true;
+  const t1 = tileOf(G.theo.x, G.theo.y), t2 = tileOf(G.pip.x, G.pip.y);
+  if (t1[0] === tx && t1[1] === ty) return true;
+  if (t2[0] === tx && t2[1] === ty) return true;
+  return false;
+}
+function boxCollides(px, py, r, who) {
+  const x0 = Math.floor((px - r) / TILE), x1 = Math.floor((px + r - 0.01) / TILE);
+  const y0 = Math.floor((py - HUD_H - r) / TILE), y1 = Math.floor((py - HUD_H + r - 0.01) / TILE);
+  for (let ty = y0; ty <= y1; ty++)
+    for (let tx = x0; tx <= x1; tx++)
+      if (solidAt(tx, ty, who)) return true;
+  return false;
+}
+function overlappedTiles(px, py, r) {
+  const out = [];
+  const x0 = Math.floor((px - r) / TILE), x1 = Math.floor((px + r - 0.01) / TILE);
+  const y0 = Math.floor((py - HUD_H - r) / TILE), y1 = Math.floor((py - HUD_H + r - 0.01) / TILE);
+  for (let ty = y0; ty <= y1; ty++)
+    for (let tx = x0; tx <= x1; tx++)
+      if (inBounds(tx, ty)) out.push([tx, ty]);
+  return out;
+}
+
+// Breadth-first path on the tile grid (for the badger). Returns list of [tx,ty].
+function bfsPath(sx, sy, tx, ty, who) {
+  if (!inBounds(tx, ty) || !inBounds(sx, sy)) return [];
+  if (sx === tx && sy === ty) return [];
+  const key = function (x, y) { return x + ',' + y; };
+  const prev = {}; prev[key(sx, sy)] = null;
+  const q = [[sx, sy]];
+  const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  while (q.length) {
+    const cur = q.shift();
+    if (cur[0] === tx && cur[1] === ty) break;
+    for (const d of dirs) {
+      const nx = cur[0] + d[0], ny = cur[1] + d[1];
+      const k = key(nx, ny);
+      if (!inBounds(nx, ny) || prev.hasOwnProperty(k)) continue;
+      if (gridSolid(nx, ny, who)) continue;
+      prev[k] = cur;
+      q.push([nx, ny]);
+    }
+  }
+  if (!prev.hasOwnProperty(key(tx, ty))) return [];
+  const path = [];
+  let cur = [tx, ty];
+  while (cur) { path.unshift(cur); cur = prev[key(cur[0], cur[1])]; }
+  path.shift(); // drop start tile
+  return path;
+}
+
+// Line of sight blocked by rock/tree?
+function losClear(x0, y0, x1, y1) {
+  let dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+  let sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+  let err = dx - dy, x = x0, y = y0;
+  while (!(x === x1 && y === y1)) {
+    if (!(x === x0 && y === y0)) {
+      const ch = tileChar(x, y);
+      if (ch === '#' || ch === 'T') return false;
+    }
+    const e2 = 2 * err;
+    if (e2 > -dy) { err -= dy; x += sx; }
+    if (e2 < dx) { err += dx; y += sy; }
+  }
+  return true;
+}
+
+// ==================== PARTICLES ====================
+function puff(x, y, color, n, spd, life, size) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * 6.283, s = (0.3 + Math.random() * 0.7) * spd;
+    G.particles.push({
+      x: x, y: y,
+      vx: Math.cos(a) * s, vy: Math.sin(a) * s - spd * 0.25,
+      life: life * (0.6 + Math.random() * 0.4), maxLife: life,
+      color: color, size: size * (0.6 + Math.random() * 0.8)
+    });
+  }
+}
+function dustPuff(x, y) { puff(x, y, '#cbb28a', 8, 90, 0.5, 4); }
+function sparkle(x, y) { puff(x, y, '#ffe27a', 10, 70, 0.6, 3); }
+function splashP(x, y) { puff(x, y, '#9fd4f0', 10, 110, 0.5, 4); }
+function ring(x, y) {
+  G.particles.push({ x: x, y: y, vx: 0, vy: 0, life: 0.6, maxLife: 0.6, color: '#ffffff', size: 6, ring: true });
+}
+function updateParticles(dt) {
+  for (let i = G.particles.length - 1; i >= 0; i--) {
+    const p = G.particles[i];
+    p.life -= dt;
+    if (p.life <= 0) { G.particles.splice(i, 1); continue; }
+    if (!p.ring) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 160 * dt; }
+  }
+}
+
+// ==================== CHARACTER CONTROL ====================
+function controlledChar() { return G.controlled === 'theo' ? G.theo : G.pip; }
+
+function switchChar() {
+  if (!isPlay()) return;
+  G.controlled = G.controlled === 'theo' ? 'pip' : 'theo';
+  G.pip.sit = false;
+  G.slide = null; // a slide never survives a character swap
+  AU.switchS();
+  const c = controlledChar();
+  ring(c.x, c.y - 10);
+}
+
+function whistle() {
+  if (!isPlay()) return;
+  G.pipFollow = !G.pipFollow;
+  if (!G.pipFollow) { G.pip.sit = true; }
+  else { G.pip.sit = false; }
+  AU.sign();
+  const p = G.pip;
+  puff(p.x, p.y - 18, G.pipFollow ? '#9fe08a' : '#e0a08a', 6, 60, 0.5, 3);
+}
+
+function moveChar(c, dx, dy, who) {
+  // X axis
+  const nx = c.x + dx;
+  if (!boxCollides(nx, c.y, c.r, who)) {
+    c.x = nx;
+  } else {
+    if (who === 'theo') {
+      // Gate unlock: walking into G with key
+      if (G.hasKey) {
+        const tiles = overlappedTiles(nx, c.y, c.r);
+        let unlocked = false;
+        for (const t of tiles) {
+          if (G.grid[t[1]][t[0]] === 'G') { G.grid[t[1]][t[0]] = '.'; unlocked = true; }
+        }
+        if (unlocked) { AU.unlock(); sparkle(c.x, c.y); G.hasKey = false; }
+      }
+      tryPushCrate(c, dx, 0);
+    }
+    if (!boxCollides(nx, c.y, c.r, who)) c.x = nx;
+  }
+  // Y axis
+  const ny = c.y + dy;
+  if (!boxCollides(c.x, ny, c.r, who)) {
+    c.y = ny;
+  } else {
+    if (who === 'theo') {
+      if (G.hasKey) {
+        const tiles = overlappedTiles(c.x, ny, c.r);
+        let unlocked = false;
+        for (const t of tiles) {
+          if (G.grid[t[1]][t[0]] === 'G') { G.grid[t[1]][t[0]] = '.'; unlocked = true; }
+        }
+        if (unlocked) { AU.unlock(); sparkle(c.x, c.y); G.hasKey = false; }
+      }
+      tryPushCrate(c, 0, dy);
+    }
+    if (!boxCollides(c.x, ny, c.r, who)) c.y = ny;
+  }
+  c.x = Math.max(c.r, Math.min(W - c.r, c.x));
+  c.y = Math.max(HUD_H + c.r, Math.min(HUD_H + PLAY_H - c.r, c.y));
+}
+
+function tryPushCrate(c, dx, dy) {
+  const nx = c.x + dx, ny = c.y + dy;
+  for (const cr of G.crates) {
+    const cx = cr.tx * TILE + TILE / 2, cy = HUD_H + cr.ty * TILE + TILE / 2;
+    if (Math.abs(nx - cx) < TILE && Math.abs(ny - cy) < TILE) {
+      let ddx = 0, ddy = 0;
+      if (Math.abs(dx) >= Math.abs(dy)) ddx = dx > 0 ? 1 : -1;
+      else ddy = dy > 0 ? 1 : -1;
+      const ttx = cr.tx + ddx, tty = cr.ty + ddy;
+      if (!inBounds(ttx, tty) || gridSolid(ttx, tty, 'theo')) return false;
+      for (const o of G.crates) if (o !== cr && o.tx === ttx && o.ty === tty) return false;
+      const t1 = tileOf(G.theo.x, G.theo.y), t2 = tileOf(G.pip.x, G.pip.y);
+      if ((ttx === t1[0] && tty === t1[1]) || (ttx === t2[0] && tty === t2[1])) return false;
+      cr.tx = ttx; cr.ty = tty;
+      dustPuff(cx, cy);
+      AU.noise(0.08, 320, 0.18);
+      return true;
+    }
+  }
+  return false;
+}
+
+function moveToward(c, tx, ty, dt, who, stopDist) {
+  const dx = tx - c.x, dy = ty - c.y;
+  const d = Math.hypot(dx, dy);
+  if (d < (stopDist || 2)) return true;
+  const s = Math.min(c.speed * dt, d);
+  moveChar(c, dx / d * s, dy / d * s, who);
+  c.face.x = dx / d; c.face.y = dy / d;
+  c.moving = true;
+  return false;
+}
+
+// ==================== ACTIONS ====================
+function doAction() {
+  if (!isPlay()) return;
+  const c = controlledChar();
+  const who = G.controlled;
+  const t = tileOf(c.x, c.y);
+  const tx = t[0], ty = t[1];
+  const adj = [[tx, ty], [tx + 1, ty], [tx - 1, ty], [tx, ty + 1], [tx, ty - 1]];
+  const L = LEVELS[G.levelIndex];
+
+  if (who === 'pip') {
+    // 1) dig
+    for (const a of adj) {
+      if (inBounds(a[0], a[1]) && G.grid[a[1]][a[0]] === 'D' && !G.dug[a[0] + ',' + a[1]]) {
+        digMound(a[0], a[1]); return;
+      }
+    }
+    // 2) lever (Pip can flip too)
+    for (const a of adj) {
+      if (inBounds(a[0], a[1]) && G.grid[a[1]][a[0]] === 'V') { flipLever(); return; }
+    }
+    // 3) bark
+    bark();
+    return;
+  }
+  // Theo
+  for (const a of adj) {
+    if (inBounds(a[0], a[1]) && G.grid[a[1]][a[0]] === 'V') { flipLever(); return; }
+  }
+  if (L.rope && tx === L.rope.ax && ty === L.rope.ay && !G.ropeDown) { dropRope(); return; }
+  for (const a of adj) {
+    if (inBounds(a[0], a[1]) && G.grid[a[1]][a[0]] === 'S') {
+      const key = a[0] + ',' + a[1];
+      if (L.signs && L.signs[key]) { showSign(L.signs[key]); return; }
+    }
+  }
+}
+
+function digMound(tx, ty) {
+  G.dug[tx + ',' + ty] = true;
+  G.grid[ty][tx] = ',';
+  const cx = tx * TILE + TILE / 2, cy = HUD_H + ty * TILE + TILE / 2;
+  AU.dig();
+  dustPuff(cx, cy); dustPuff(cx - 10, cy + 6); dustPuff(cx + 10, cy + 6);
+  // Key pops onto an adjacent free tile (up, right, down, left).
+  const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+  for (const d of dirs) {
+    const nx = tx + d[0], ny = ty + d[1];
+    if (inBounds(nx, ny) && !gridSolid(nx, ny, 'theo') && G.grid[ny][nx] !== 'k') {
+      let blocked = false;
+      for (const cr of G.crates) if (cr.tx === nx && cr.ty === ny) blocked = true;
+      if (!blocked) {
+        G.grid[ny][nx] = 'k';
+        const kx = nx * TILE + TILE / 2, ky = HUD_H + ny * TILE + TILE / 2;
+        sparkle(kx, ky);
+        AU.pickup();
+        break;
+      }
+    }
+  }
+}
+
+function bark() {
+  const p = G.pip;
+  AU.bark();
+  ring(p.x, p.y - 14);
+  puff(p.x, p.y - 22, '#ffffff', 5, 70, 0.4, 3);
+  const b = G.badger;
+  if (!b) return;
+  const d = Math.hypot(p.x - b.x, p.y - b.y) / TILE;
+  if (d <= 5 && (b.state === 'nap' || b.state === 'return' || b.state === 'chase')) {
+    const pt = tileOf(p.x, p.y);
+    b.state = 'curious';
+    b.barkTx = pt[0]; b.barkTy = pt[1];
+    const bt = tileOf(b.x, b.y);
+    b.path = bfsPath(bt[0], bt[1], b.barkTx, b.barkTy, 'badger');
+    b.pathI = 0;
+    b.giveupT = 0;
+  }
+}
+
+function flipLever() {
+  const L = LEVELS[G.levelIndex];
+  if (!L.leverDoor || G.doorOpen) return;
+  G.doorOpen = true; G.leverOn = true;
+  AU.lever();
+  // sparkle at the door tile(s)
+  for (let y = 0; y < ROWS; y++)
+    for (let x = 0; x < COLS; x++)
+      if (G.grid[y][x] === 'd') {
+        const cx = x * TILE + TILE / 2, cy = HUD_H + y * TILE + TILE / 2;
+        sparkle(cx, cy);
+      }
+}
+
+function dropRope() {
+  const L = LEVELS[G.levelIndex];
+  if (!L.rope || G.ropeDown) return;
+  G.ropeDown = true;
+  AU.rope();
+  const cx = L.rope.tx * TILE + TILE / 2, cy = HUD_H + L.rope.ty * TILE + TILE / 2;
+  sparkle(cx, cy);
+}
+
+function showSign(text) {
+  G.signText = text; G.signTimer = 4;
+  AU.sign();
+}
+
+function throwStick() {
+  if (!isPlay() || G.controlled !== 'theo' || G.stick) return;
+  const t = G.theo;
+  let dx = Math.round(t.face.x), dy = Math.round(t.face.y);
+  if (dx === 0 && dy === 0) { dx = 0; dy = 1; }
+  // Prefer the dominant axis so the stick flies straight.
+  if (Math.abs(t.face.x) > Math.abs(t.face.y)) { dx = t.face.x > 0 ? 1 : -1; dy = 0; }
+  else { dy = t.face.y > 0 ? 1 : -1; dx = 0; }
+  const st = tileOf(t.x, t.y);
+  let lx = st[0], ly = st[1];
+  for (let i = 0; i < 4; i++) {
+    const nx = lx + dx, ny = ly + dy;
+    if (!inBounds(nx, ny) || gridSolid(nx, ny, 'pip')) break;
+    lx = nx; ly = ny;
+  }
+  const lc = tileCenter(lx, ly);
+  G.stick = { x: t.x, y: t.y, sx: t.x, sy: t.y - 10, tx: lc[0], ty: lc[1], t: 0 };
+  G.pipTarget = { x: lc[0], y: lc[1] };
+  G.pip.sit = false;
+  AU.stick();
+}
+
+// ==================== BADGER AI ====================
+function updateBadger(dt) {
+  const b = G.badger;
+  if (!b) return;
+  b.wob += dt * 6;
+  const bt = tileOf(b.x, b.y);
+  const tt = tileOf(G.theo.x, G.theo.y);
+  const distTheo = Math.hypot(G.theo.x - b.x, G.theo.y - b.y) / TILE;
+
+  if (b.state === 'nap') {
+    if (distTheo <= 2.5 && losClear(bt[0], bt[1], tt[0], tt[1])) {
+      b.state = 'chase';
+      b.repathT = 0; b.giveupT = 0;
+      AU.grumble();
+      ring(b.x, b.y - 16);
+    }
+  } else if (b.state === 'chase') {
+    b.repathT -= dt;
+    if (b.repathT <= 0) {
+      b.path = bfsPath(bt[0], bt[1], tt[0], tt[1], 'badger');
+      b.pathI = 0; b.repathT = 0.4;
+    }
+    // If Theo is unreachable (no path), give up faster.
+    if (b.path.length === 0) b.giveupT += dt * 2;
+    const chaseSpd = LEVELS[G.levelIndex].badgerFast ? THEO_SPEED * 1.15 : THEO_SPEED * 0.9;
+    followPath(b, dt, chaseSpd);
+    if (distTheo < 0.75) {
+      // Caught! Theo resets to level start; badger waddles home. Keep pickups.
+      G.flash = 0.45;
+      AU.grumble();
+      puff(G.theo.x, G.theo.y, '#ffffff', 12, 120, 0.5, 4);
+      const hc = tileCenter(G.P[0], G.P[1]);
+      G.theo.x = hc[0]; G.theo.y = hc[1];
+      G.slide = null; // caught mid-slide: Theo restarts standing still
+      b.state = 'return';
+      const cb = tileOf(b.x, b.y);
+      b.path = bfsPath(cb[0], cb[1], b.homeTx, b.homeTy, 'badger');
+      b.pathI = 0;
+    } else if (distTheo > 7) {
+      b.giveupT += dt;
+      if (b.giveupT > 2) {
+        b.state = 'return';
+        const cb = tileOf(b.x, b.y);
+        b.path = bfsPath(cb[0], cb[1], b.homeTx, b.homeTy, 'badger');
+        b.pathI = 0; b.giveupT = 0;
+      }
+    } else if (b.path.length > 0) b.giveupT = 0;
+  } else if (b.state === 'curious') {
+    followPath(b, dt, BADGER_SPEED);
+    if (b.pathI >= b.path.length) { b.state = 'sniff'; b.sniffT = 6; }
+  } else if (b.state === 'sniff') {
+    b.sniffT -= dt;
+    if (b.sniffT <= 0) {
+      b.state = 'return';
+      const cb = tileOf(b.x, b.y);
+      b.path = bfsPath(cb[0], cb[1], b.homeTx, b.homeTy, 'badger');
+      b.pathI = 0;
+    }
+  } else if (b.state === 'return') {
+    followPath(b, dt, BADGER_SPEED);
+    if (b.pathI >= b.path.length) b.state = 'nap';
+  }
+}
+
+function followPath(b, dt, speed) {
+  if (b.pathI >= b.path.length) return;
+  const node = b.path[b.pathI];
+  const c = tileCenter(node[0], node[1]);
+  const dx = c[0] - b.x, dy = c[1] - b.y;
+  const d = Math.hypot(dx, dy);
+  if (d < 5) { b.pathI++; return; }
+  const s = Math.min(speed * dt, d);
+  const nx = b.x + dx / d * s, ny = b.y + dy / d * s;
+  // Badger moves like Theo but can't swim, tunnel, or climb ladders.
+  if (!boxCollides(nx, b.y, b.r, 'badger')) b.x = nx;
+  if (!boxCollides(b.x, ny, b.r, 'badger')) b.y = ny;
+  b.x = Math.max(b.r, Math.min(W - b.r, b.x));
+  b.y = Math.max(HUD_H + b.r, Math.min(HUD_H + PLAY_H - b.r, b.y));
+  if (Math.abs(dx) > 1) b.face.x = dx > 0 ? 1 : -1;
+}
+// ==================== UPDATE ====================
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function update(dt) {
+  G.time += dt;
+  if (G.flash > 0) G.flash -= dt;
+  if (G.signTimer > 0) { G.signTimer -= dt; if (G.signTimer <= 0) G.signText = null; }
+  updateParticles(dt);
+
+  // Stick flight animation.
+  if (G.stick && G.stick.t < 1) {
+    G.stick.t = Math.min(1, G.stick.t + dt / 0.35);
+    const t = G.stick.t;
+    G.stick.x = lerp(G.stick.sx, G.stick.tx, t);
+    G.stick.y = lerp(G.stick.sy, G.stick.ty, t) - Math.sin(t * Math.PI) * 44;
+  }
+
+  // --- Controlled character movement (keyboard + joystick) ---
+  const c = controlledChar(), who = G.controlled;
+  let mx = 0, my = 0;
+  if (keys['w'] || keys['arrowup']) my -= 1;
+  if (keys['s'] || keys['arrowdown']) my += 1;
+  if (keys['a'] || keys['arrowleft']) mx -= 1;
+  if (keys['d'] || keys['arrowright']) mx += 1;
+  if (joy.id !== null) { mx += joy.dx; my += joy.dy; }
+  const ml = Math.hypot(mx, my);
+  c.moving = false;
+  // Ice ('~'): Theo slides in his current direction until he reaches a
+  // non-ice tile, hits something solid, or the player gives new input
+  // (new input overrides the slide). Pip is sure-footed: no sliding.
+  const ct0 = tileOf(c.x, c.y);
+  const onIce = who === 'theo' && inBounds(ct0[0], ct0[1]) && G.grid[ct0[1]][ct0[0]] === '~';
+  if (onIce && ml <= 0.15 && G.slide) {
+    const ox = c.x, oy = c.y;
+    moveChar(c, G.slide.x * c.speed * dt, G.slide.y * c.speed * dt, who);
+    const nt = tileOf(c.x, c.y);
+    const stillIce = inBounds(nt[0], nt[1]) && G.grid[nt[1]][nt[0]] === '~';
+    if (Math.abs(c.x - ox) + Math.abs(c.y - oy) > 0.01 && stillIce) {
+      c.moving = true;
+      c.face.x = G.slide.x; c.face.y = G.slide.y;
+    } else {
+      G.slide = null; // reached solid ground or hit something solid
+    }
+  } else if (ml > 0.15) {
+    const nx = mx / Math.max(1, ml), ny = my / Math.max(1, ml);
+    const spd = c.speed * Math.min(1, ml);
+    const ox = c.x, oy = c.y;
+    moveChar(c, nx * spd * dt, ny * spd * dt, who);
+    if (Math.abs(c.x - ox) + Math.abs(c.y - oy) > 0.01) {
+      c.moving = true;
+      c.face.x = nx; c.face.y = ny;
+      // Manual Pip movement overrides an in-progress stick fetch.
+      if (who === 'pip' && G.pipTarget) { G.pipTarget = null; G.stick = null; }
+    }
+    // New input overrides sliding; remember the direction so stepping
+    // onto ice keeps sliding even if the key is released the same frame.
+    G.slide = who === 'theo' ? { x: nx, y: ny } : null;
+  } else if (who === 'theo') {
+    G.slide = null;
+  }
+  c.sit = false;
+
+  // --- Pip autonomy (only while Theo is controlled) ---
+  if (who === 'theo') {
+    const p = G.pip;
+    if (G.pipTarget) {
+      // Fetching the thrown stick.
+      const arrived = moveToward(p, G.pipTarget.x, G.pipTarget.y, dt, 'pip', 8);
+      p.moving = !arrived;
+      if (arrived) { G.pipTarget = null; G.stick = null; p.moving = false; }
+    } else if (!G.pipFollow) {
+      p.sit = true; p.moving = false;
+    } else {
+      const d = Math.hypot(p.x - G.theo.x, p.y - G.theo.y) / TILE;
+      if (d > 2.2) p.following = true;
+      else if (d < 1.5) p.following = false;
+      if (p.following) {
+        moveToward(p, G.theo.x, G.theo.y, dt, 'pip', 1.5 * TILE);
+        p.moving = true; p.sit = false;
+      } else { p.moving = false; }
+    }
+  } else {
+    G.theo.moving = false;
+    G.slide = null; // sliding stops while Theo is not controlled
+  }
+
+  // --- Water splash when Pip enters water ---
+  const pt = tileOf(G.pip.x, G.pip.y);
+  const onWater = inBounds(pt[0], pt[1]) && G.grid[pt[1]][pt[0]] === 'W';
+  if (onWater && !G.pip.inWater) { AU.splash(); splashP(G.pip.x, G.pip.y); }
+  if (onWater && G.pip.moving && Math.random() < dt * 8) splashP(G.pip.x, G.pip.y);
+  G.pip.inWater = onWater;
+
+  // --- Scent trail reveal (Pip within 3 tiles) ---
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (G.grid[y][x] === 'h' && !G.revealedH[x + ',' + y]) {
+        const cx = x * TILE + TILE / 2, cy = HUD_H + y * TILE + TILE / 2;
+        if (Math.hypot(G.pip.x - cx, G.pip.y - cy) / TILE <= 3) {
+          G.revealedH[x + ',' + y] = true;
+          sparkle(cx, cy);
+        }
+      }
+    }
+  }
+
+  // --- Pressure plates (level flag plateDoor): pressure doors ('q') stay
+  // open only while at least one plate is pressed; they close again when
+  // all release. Lever doors ('d') are a separate circuit (G.doorOpen).
+  if (LEVELS[G.levelIndex].plateDoor) {
+    let anyPressed = false;
+    for (let y = 0; y < ROWS && !anyPressed; y++) {
+      for (let x = 0; x < COLS; x++) {
+        if (G.grid[y][x] === 'o' && platePressed(x, y)) { anyPressed = true; break; }
+      }
+    }
+    G.plateOpen = anyPressed;
+  }
+
+  updateBadger(dt);
+  checkPickups();
+  checkExit();
+}
+
+function checkPickups() {
+  const tt = tileOf(G.theo.x, G.theo.y);
+  const pt = tileOf(G.pip.x, G.pip.y);
+  if (inBounds(tt[0], tt[1])) {
+    const ch = G.grid[tt[1]][tt[0]];
+    if (ch === 'k') { G.grid[tt[1]][tt[0]] = '.'; G.hasKey = true; AU.pickup(); sparkle(G.theo.x, G.theo.y); }
+    else if (ch === 'R') { G.grid[tt[1]][tt[0]] = '.'; G.hasRelic = true; AU.pickup(); sparkle(G.theo.x, G.theo.y); }
+  }
+  const picks = [[tt, G.theo], [pt, G.pip]];
+  for (const pk of picks) {
+    const tx = pk[0][0], ty = pk[0][1], c = pk[1];
+    if (inBounds(tx, ty) && G.grid[ty][tx] === 'F') {
+      G.grid[ty][tx] = '.';
+      G.fireflyCount++;
+      AU.pickup();
+      sparkle(c.x, c.y);
+      puff(c.x, c.y - 10, '#fff3a0', 8, 80, 0.7, 3);
+    }
+  }
+}
+
+function checkExit() {
+  const L = LEVELS[G.levelIndex];
+  const tt = tileOf(G.theo.x, G.theo.y);
+  const pt = tileOf(G.pip.x, G.pip.y);
+  const theoOnE = inBounds(tt[0], tt[1]) && G.grid[tt[1]][tt[0]] === 'E';
+  const pipOnE = inBounds(pt[0], pt[1]) && G.grid[pt[1]][pt[0]] === 'E';
+  if (theoOnE && pipOnE && (!L.relic || G.hasRelic)) {
+    G.mode = 'win';
+    AU.win();
+    const cx = tt[0] * TILE + TILE / 2, cy = HUD_H + tt[1] * TILE + TILE / 2;
+    sparkle(cx, cy);
+  }
+}
+// ==================== RENDER ====================
+function srand(tx, ty) {
+  let h = (tx * 374761393 + ty * 668265263) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+}
+function rr(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function circle(x, y, r, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
+}
+function ell(x, y, rx, ry, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, 6.2832); ctx.fill();
+}
+
+function drawTile(tx, ty) {
+  const ch = G.grid[ty][tx];
+  const x = tx * TILE, y = HUD_H + ty * TILE;
+  const r1 = srand(tx, ty), r2 = srand(tx + 40, ty + 9), r3 = srand(tx + 7, ty + 31);
+
+  // Base grass with gentle variation.
+  const g = 150 + Math.floor(r1 * 22);
+  ctx.fillStyle = 'rgb(118,' + g + ',96)';
+  ctx.fillRect(x, y, TILE, TILE);
+  // Grass blades / speckles.
+  ctx.fillStyle = 'rgba(90,130,70,0.5)';
+  for (let i = 0; i < 3; i++) {
+    const bx = x + 6 + r2 * 36, by = y + 8 + ((r3 * 36 + i * 13) % 34);
+    ctx.fillRect(bx, by, 2, 5 + (i % 2) * 3);
+  }
+  if (r1 > 0.86) { // tiny flower
+    circle(x + 10 + r2 * 28, y + 12 + r3 * 24, 2.5, '#f6e27a');
+    circle(x + 10 + r2 * 28, y + 12 + r3 * 24, 1.2, '#e08a4a');
+  }
+
+  if (ch === ',') {
+    ctx.fillStyle = '#d9b382';
+    ctx.fillRect(x, y, TILE, TILE);
+    ctx.fillStyle = 'rgba(160,120,70,0.45)';
+    ctx.fillRect(x + 6 + r2 * 20, y + 10 + r3 * 20, 8, 4);
+    ctx.fillRect(x + 22 + r3 * 12, y + 26 + r2 * 10, 6, 3);
+  } else if (ch === '#') {
+    // Warm stone block.
+    ctx.fillStyle = '#8d8272';
+    ctx.fillRect(x, y, TILE, TILE);
+    ctx.fillStyle = '#9d9280';
+    ctx.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
+    ctx.fillStyle = 'rgba(70,60,48,0.35)';
+    ctx.fillRect(x + 2, y + TILE - 8, TILE - 4, 6);
+    ctx.fillStyle = 'rgba(255,245,220,0.25)';
+    ctx.fillRect(x + 2, y + 2, TILE - 4, 5);
+    // cracks
+    ctx.strokeStyle = 'rgba(70,60,48,0.4)'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x + 8 + r2 * 20, y + 6); ctx.lineTo(x + 14 + r2 * 16, y + TILE - 10);
+    ctx.moveTo(x + 6, y + 18 + r3 * 12); ctx.lineTo(x + TILE - 8, y + 22 + r3 * 10);
+    ctx.stroke();
+  } else if (ch === 'T') {
+    // Tree: trunk + canopy.
+    ctx.fillStyle = '#6b4423';
+    ctx.fillRect(x + TILE / 2 - 5, y + TILE / 2 - 2, 10, 22);
+    circle(x + TILE / 2, y + TILE / 2 - 8, 17, '#4e7d3a');
+    circle(x + TILE / 2 - 10, y + TILE / 2 - 2, 12, '#5d9046');
+    circle(x + TILE / 2 + 10, y + TILE / 2 - 2, 12, '#457035');
+    circle(x + TILE / 2 - 4, y + TILE / 2 - 14, 5, '#6fa554');
+  } else if (ch === 'W') {
+    ctx.fillStyle = '#4f9fd0';
+    ctx.fillRect(x, y, TILE, TILE);
+    ctx.fillStyle = '#6db8e2';
+    ctx.fillRect(x, y, TILE, 10);
+    // animated ripples
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2;
+    const ph = G.time * 2 + r1 * 6;
+    for (let i = 0; i < 2; i++) {
+      const ry = y + 14 + i * 16 + Math.sin(ph + i) * 3;
+      ctx.beginPath();
+      ctx.moveTo(x + 8, ry);
+      ctx.quadraticCurveTo(x + 18, ry - 4, x + 28, ry);
+      ctx.quadraticCurveTo(x + 36, ry + 4, x + 42, ry);
+      ctx.stroke();
+    }
+  } else if (ch === '~') {
+    // Ice sheet: pale blue sheen with white glide streaks.
+    ctx.fillStyle = '#bcdcec';
+    ctx.fillRect(x, y, TILE, TILE);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillRect(x, y, TILE, 8);
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x + 8, y + 24 + r2 * 10); ctx.lineTo(x + 26 + r3 * 10, y + 24 + r2 * 10);
+    ctx.moveTo(x + 14 + r3 * 8, y + 34); ctx.lineTo(x + 32, y + 34);
+    ctx.stroke();
+  } else if (ch === 'o') {
+    // Pressure plate: stone plate that sinks and glows gold while pressed.
+    const pressed = platePressed(tx, ty);
+    ctx.fillStyle = pressed ? '#a89372' : '#8d8272';
+    ctx.fillRect(x + 6, y + 6, TILE - 12, TILE - 12);
+    ctx.fillStyle = pressed ? '#c9a15e' : '#9d9280';
+    ctx.fillRect(x + 10, y + 10, TILE - 20, TILE - 20);
+    if (pressed) {
+      ctx.fillStyle = 'rgba(255,240,170,0.55)';
+      ctx.fillRect(x + 12, y + 12, TILE - 24, TILE - 24);
+    }
+  } else if (ch === '=') {
+    // Burrow: dark opening with grass tuft.
+    ell(x + TILE / 2, y + TILE / 2 + 4, 17, 12, '#2e2418');
+    ell(x + TILE / 2, y + TILE / 2 + 2, 13, 9, '#171008');
+    ctx.strokeStyle = '#5d9046'; ctx.lineWidth = 3;
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.moveTo(x + TILE / 2 + i * 12, y + 8);
+      ctx.quadraticCurveTo(x + TILE / 2 + i * 12 + 3, y - 2, x + TILE / 2 + i * 12 + 6, y - 4);
+      ctx.stroke();
+    }
+  } else if (ch === 'L') {
+    // Wooden ladder.
+    ctx.fillStyle = '#7a5230';
+    ctx.fillRect(x + 10, y + 2, 7, TILE - 4);
+    ctx.fillRect(x + TILE - 17, y + 2, 7, TILE - 4);
+    ctx.fillStyle = '#8f6538';
+    for (let i = 0; i < 4; i++) ctx.fillRect(x + 10, y + 7 + i * 10, TILE - 20, 5);
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.fillRect(x + TILE - 17, y + 2, 3, TILE - 4);
+  } else if (ch === 'A') {
+    // Rope anchor: post + coiled rope.
+    ctx.fillStyle = '#6b4423';
+    ctx.fillRect(x + TILE / 2 - 4, y + 10, 8, 26);
+    ctx.strokeStyle = '#c9a15e'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(x + TILE / 2, y + 28, 9, 0, 6.2832); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x + TILE / 2, y + 28, 4.5, 0, 6.2832); ctx.stroke();
+    if (G.ropeDown) { // rope tied, trailing down
+      ctx.strokeStyle = '#b08a48'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(x + TILE / 2, y + 34); ctx.lineTo(x + TILE / 2, y + TILE); ctx.stroke();
+    }
+  } else if (ch === 'D') {
+    // Dig mound.
+    ell(x + TILE / 2, y + TILE / 2 + 6, 18, 11, '#8a5f36');
+    ell(x + TILE / 2 - 5, y + TILE / 2 + 2, 11, 8, '#9d6f42');
+    circle(x + TILE / 2 + 7, y + TILE / 2 - 2, 3, '#7a4f2a');
+  } else if (ch === 'k') {
+    drawKeyIcon(x + TILE / 2, y + TILE / 2, 1);
+  } else if (ch === 'G') {
+    // Locked gate: iron bars.
+    ctx.fillStyle = '#5a4a36';
+    ctx.fillRect(x + 4, y + 4, TILE - 8, TILE - 8);
+    ctx.fillStyle = '#3d3d46';
+    for (let i = 0; i < 4; i++) ctx.fillRect(x + 10 + i * 9, y + 6, 5, TILE - 12);
+    ctx.fillStyle = '#2b2b32';
+    ctx.fillRect(x + 4, y + 6, TILE - 8, 5);
+    ctx.fillRect(x + 4, y + TILE - 11, TILE - 8, 5);
+    circle(x + TILE / 2, y + TILE / 2, 6, '#c9a15e'); // lock
+    ctx.fillStyle = '#3d2f1a';
+    ctx.fillRect(x + TILE / 2 - 1.5, y + TILE / 2 - 1, 3, 7);
+  } else if (ch === 'V') {
+    // Lever: base + handle (angle flips when on).
+    ell(x + TILE / 2, y + TILE / 2 + 10, 13, 7, '#6f6f78');
+    const ang = G.leverOn ? -0.9 : 0.9;
+    const hx = x + TILE / 2 + Math.sin(ang) * 20, hy = y + TILE / 2 + 10 - Math.cos(ang) * 20;
+    ctx.strokeStyle = '#8a5f36'; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(x + TILE / 2, y + TILE / 2 + 8); ctx.lineTo(hx, hy); ctx.stroke();
+    circle(hx, hy, 7, '#b03a2e');
+    circle(hx - 2, hy - 2, 2.5, '#d4695e');
+  } else if (ch === 'd') {
+    if (G.doorOpen) {
+      // Open doorway: stone frame, grass inside.
+      ctx.fillStyle = '#8d8272';
+      ctx.fillRect(x, y, 8, TILE); ctx.fillRect(x + TILE - 8, y, 8, TILE);
+      ctx.fillRect(x, y, TILE, 8);
+    } else {
+      ctx.fillStyle = '#7a5230';
+      ctx.fillRect(x + 6, y + 2, TILE - 12, TILE - 4);
+      ctx.fillStyle = '#8f6538';
+      ctx.fillRect(x + 10, y + 6, TILE - 20, TILE - 12);
+      ctx.strokeStyle = '#5d3d20'; ctx.lineWidth = 2;
+      ctx.strokeRect(x + 10, y + 6, TILE - 20, TILE - 12);
+      circle(x + TILE - 14, y + TILE / 2, 3.5, '#3d2f1a');
+    }
+  } else if (ch === 'q') {
+    // Pressure door (Pack 2): copper gate tied to the plates circuit.
+    if (G.plateOpen) {
+      ctx.fillStyle = '#8a6a4a';
+      ctx.fillRect(x, y, 8, TILE); ctx.fillRect(x + TILE - 8, y, 8, TILE);
+      ctx.fillRect(x, y, TILE, 8);
+    } else {
+      ctx.fillStyle = '#a8763e';
+      ctx.fillRect(x + 6, y + 2, TILE - 12, TILE - 4);
+      ctx.fillStyle = '#c08d4e';
+      ctx.fillRect(x + 10, y + 6, TILE - 20, TILE - 12);
+      ctx.strokeStyle = '#7a5228'; ctx.lineWidth = 2;
+      ctx.strokeRect(x + 10, y + 6, TILE - 20, TILE - 12);
+      circle(x + TILE - 14, y + TILE / 2, 3.5, '#5d3d20');
+    }
+  } else if (ch === 'R') {
+    drawCompassIcon(x + TILE / 2, y + TILE / 2 - 2, 15, true);
+  } else if (ch === 'F') {
+    const pulse = 0.6 + 0.4 * Math.sin(G.time * 4 + r1 * 6);
+    const glow = ctx.createRadialGradient(x + TILE / 2, y + TILE / 2, 1, x + TILE / 2, y + TILE / 2, 16);
+    glow.addColorStop(0, 'rgba(255,240,150,' + (0.85 * pulse + 0.15) + ')');
+    glow.addColorStop(1, 'rgba(255,240,150,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(x, y, TILE, TILE);
+    circle(x + TILE / 2, y + TILE / 2, 4.5 * pulse + 2, '#ffe27a');
+    circle(x + TILE / 2, y + TILE / 2, 2, '#fffbe0');
+  } else if (ch === 'S') {
+    ctx.fillStyle = '#6b4423';
+    ctx.fillRect(x + TILE / 2 - 3, y + 14, 6, TILE - 16);
+    ctx.fillStyle = '#8a5f36';
+    rr(x + 6, y + 6, TILE - 12, 16, 4); ctx.fill();
+    ctx.fillStyle = '#5d3d20';
+    ctx.font = 'bold 11px Georgia'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('?', x + TILE / 2, y + 15);
+  } else if (ch === 'E') {
+    drawCampsite(x, y);
+  } else if (ch === 'h') {
+    if (G.revealedH[tx + ',' + ty]) drawPaw(x + TILE / 2, y + TILE / 2, r1);
+  }
+  // Crates (entities)
+  for (const cr of G.crates) {
+    if (cr.tx === tx && cr.ty === ty) {
+      ctx.fillStyle = '#8a5f36';
+      ctx.fillRect(x + 5, y + 5, TILE - 10, TILE - 10);
+      ctx.strokeStyle = '#5d3d20'; ctx.lineWidth = 3;
+      ctx.strokeRect(x + 5, y + 5, TILE - 10, TILE - 10);
+      ctx.beginPath();
+      ctx.moveTo(x + 5, y + 5); ctx.lineTo(x + TILE - 5, y + TILE - 5);
+      ctx.moveTo(x + TILE - 5, y + 5); ctx.lineTo(x + 5, y + TILE - 5);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawPaw(cx, cy, seed) {
+  ctx.fillStyle = 'rgba(120,90,60,0.55)';
+  ell(cx, cy + 3, 5, 4, 'rgba(120,90,60,0.55)');
+  circle(cx - 5, cy - 3, 2, 'rgba(120,90,60,0.55)');
+  circle(cx - 1.5, cy - 5, 2, 'rgba(120,90,60,0.55)');
+  circle(cx + 2, cy - 5, 2, 'rgba(120,90,60,0.55)');
+  circle(cx + 5.5, cy - 3, 2, 'rgba(120,90,60,0.55)');
+}
+
+function drawCampsite(x, y) {
+  // Tent
+  ctx.fillStyle = '#c96f4a';
+  ctx.beginPath();
+  ctx.moveTo(x + 6, y + TILE - 6); ctx.lineTo(x + TILE / 2, y + 8); ctx.lineTo(x + TILE - 6, y + TILE - 6);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#a85634';
+  ctx.beginPath();
+  ctx.moveTo(x + TILE / 2, y + 8); ctx.lineTo(x + TILE - 6, y + TILE - 6); ctx.lineTo(x + TILE / 2, y + TILE - 6);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#4a2c1a';
+  ctx.beginPath();
+  ctx.moveTo(x + TILE / 2 - 7, y + TILE - 6); ctx.lineTo(x + TILE / 2, y + 24); ctx.lineTo(x + TILE / 2 + 7, y + TILE - 6);
+  ctx.closePath(); ctx.fill();
+  // Campfire
+  const fx = x + 12, fy = y + TILE - 12;
+  ctx.fillStyle = '#6b4423';
+  ctx.fillRect(fx - 8, fy - 3, 16, 5);
+  const fl = 6 + Math.sin(G.time * 9) * 2;
+  ctx.fillStyle = '#e8823a';
+  ctx.beginPath(); ctx.arc(fx, fy - 6, fl, 0, 6.2832); ctx.fill();
+  ctx.fillStyle = '#f6c453';
+  ctx.beginPath(); ctx.arc(fx, fy - 5, fl * 0.55, 0, 6.2832); ctx.fill();
+}
+
+function drawKeyIcon(cx, cy, s) {
+  ctx.strokeStyle = '#d8a83e'; ctx.lineWidth = 4 * s;
+  ctx.beginPath(); ctx.arc(cx - 6 * s, cy, 6 * s, 0, 6.2832); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + 12 * s, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx + 8 * s, cy); ctx.lineTo(cx + 8 * s, cy + 6 * s); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx + 12 * s, cy); ctx.lineTo(cx + 12 * s, cy + 6 * s); ctx.stroke();
+}
+
+function drawCompassIcon(cx, cy, r, spin) {
+  circle(cx, cy, r, '#d8a83e');
+  circle(cx, cy, r - 3, '#f5e9c8');
+  ctx.fillStyle = '#4a3520';
+  ctx.font = 'bold ' + Math.floor(r * 0.7) + 'px Georgia';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('N', cx, cy - r * 0.45);
+  const a = spin ? G.time * 2.2 : -0.5;
+  ctx.strokeStyle = '#b03a2e'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(a) * (r - 5), cy + Math.sin(a) * (r - 5)); ctx.stroke();
+  ctx.strokeStyle = '#4a6fa5'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(cx, cy);
+  ctx.lineTo(cx - Math.cos(a) * (r - 5), cy - Math.sin(a) * (r - 5)); ctx.stroke();
+  circle(cx, cy, 2.5, '#4a3520');
+}
+// ==================== CHARACTERS ====================
+function drawTheo(c) {
+  const x = c.x, y = c.y;
+  const active = G.controlled === 'theo';
+  ell(x, y + 15, 13, 5, 'rgba(0,0,0,0.18)');
+  const bob = c.moving ? Math.sin(G.time * 13) * 1.6 : Math.sin(G.time * 2.5) * 0.8;
+  const fx = c.face.x, fy = c.face.y;
+
+  // Legs
+  ctx.fillStyle = '#5a4632';
+  const lp = c.moving ? Math.sin(G.time * 13) * 4 : 0;
+  rr(x - 9, y + 4 + (lp > 0 ? -lp * 0.4 : 0), 7, 12, 3); ctx.fill();
+  rr(x + 2, y + 4 + (lp < 0 ? lp * 0.4 : 0), 7, 12, 3); ctx.fill();
+  // Body: blue shirt
+  ctx.fillStyle = '#3f6fb5';
+  rr(x - 11, y - 8 + bob, 22, 18, 8); ctx.fill();
+  ctx.fillStyle = '#355e9c';
+  rr(x - 11, y + 2 + bob, 22, 8, 4); ctx.fill();
+  // Backpack
+  ctx.fillStyle = '#8a5f36';
+  rr(x - 16, y - 6 + bob, 7, 13, 3); ctx.fill();
+  // Arms
+  ctx.fillStyle = '#e8b88a';
+  circle(x - 12, y - 1 + bob + lp * 0.3, 4, '#e8b88a');
+  circle(x + 12, y - 1 + bob - lp * 0.3, 4, '#e8b88a');
+  // Head
+  circle(x, y - 18 + bob, 11, '#f0c49c');
+  // Ears
+  circle(x - 11, y - 18 + bob, 2.5, '#e8b88a');
+  circle(x + 11, y - 18 + bob, 2.5, '#e8b88a');
+  // Green explorer cap
+  ctx.fillStyle = '#4e7d3a';
+  ctx.beginPath(); ctx.arc(x, y - 20 + bob, 11, Math.PI, 0); ctx.fill();
+  ctx.fillRect(x - 11, y - 21 + bob, 22, 3);
+  // brim toward facing
+  ctx.fillStyle = '#457035';
+  ell(x + fx * 10, y - 19 + bob + fy * 2, 9, 3.5, '#457035');
+  // Eyes (look toward facing)
+  ctx.fillStyle = '#2b2118';
+  circle(x - 4 + fx * 3, y - 16 + bob + fy * 2, 1.8, '#2b2118');
+  circle(x + 4 + fx * 3, y - 16 + bob + fy * 2, 1.8, '#2b2118');
+  // Smile
+  ctx.strokeStyle = '#8a5a3a'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(x + fx * 2, y - 13 + bob, 3.5, 0.3, Math.PI - 0.3); ctx.stroke();
+
+  if (active) {
+    ctx.strokeStyle = 'rgba(255,200,80,0.9)'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(x, y - 4, 22, 0, 6.2832); ctx.stroke();
+  }
+}
+
+function drawPip(c) {
+  const x = c.x, y = c.y;
+  const active = G.controlled === 'pip';
+  const nearTheo = Math.hypot(c.x - G.theo.x, c.y - G.theo.y) / TILE < 3;
+  const wagSpeed = (c.moving || nearTheo) ? 16 : 6;
+  const wag = Math.sin(G.time * wagSpeed) * 0.5;
+  ell(x, y + 14, 13, 5, 'rgba(0,0,0,0.18)');
+  const fx = c.face.x, fy = c.face.y;
+
+  if (c.sit) {
+    // Sitting pose: upright body, haunches.
+    ell(x, y + 6, 12, 13, '#d8a03e');
+    ell(x - 8, y + 12, 7, 6, '#c08a2e');
+    ell(x + 8, y + 12, 7, 6, '#c08a2e');
+    circle(x, y - 10, 10, '#d8a03e');           // head
+    ell(x - 8, y - 14, 4, 8, '#b57e28');        // floppy ears
+    ell(x + 8, y - 14, 4, 8, '#b57e28');
+    circle(x - 3, y - 12, 1.8, '#2b2118');
+    circle(x + 3, y - 12, 1.8, '#2b2118');
+    ell(x, y - 6, 4, 3, '#8a5a2a');             // snout
+    circle(x, y - 7, 1.8, '#2b2118');           // nose
+    // tail wag
+    ctx.strokeStyle = '#d8a03e'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x - 10, y + 2);
+    ctx.quadraticCurveTo(x - 18, y - 4 + wag * 8, x - 14, y - 12 + wag * 6); ctx.stroke();
+    ctx.lineCap = 'butt';
+  } else {
+    const bob = c.moving ? Math.sin(G.time * 14) * 1.8 : Math.sin(G.time * 3) * 0.9;
+    // Legs
+    ctx.fillStyle = '#b57e28';
+    const lp = c.moving ? Math.sin(G.time * 14) * 3 : 0;
+    rr(x - 11, y + 4 + lp * 0.5, 6, 10, 3); ctx.fill();
+    rr(x + 5, y + 4 - lp * 0.5, 6, 10, 3); ctx.fill();
+    // Body: golden ellipse, stretched along facing
+    ctx.save();
+    ctx.translate(x, y + bob);
+    ctx.rotate(Math.atan2(fy, fx) * 0.15);
+    ell(0, 0, 15, 10, '#d8a03e');
+    ell(-8, 3, 8, 6, '#c8902f');
+    ctx.restore();
+    // Head at facing side
+    const hx = x + fx * 13, hy = y - 4 + bob + fy * 8;
+    circle(hx, hy, 9, '#d8a03e');
+    ell(hx - 7, hy - 5, 3.5, 7, '#b57e28');     // ear 1
+    ell(hx + 7, hy - 5, 3.5, 7, '#b57e28');     // ear 2
+    ell(hx + fx * 5, hy + fy * 3 + 2, 4.5, 3.5, '#e8b86a'); // snout
+    circle(hx + fx * 8, hy + fy * 4 + 2, 2, '#2b2118');     // nose
+    circle(hx - 3 + fx * 2, hy - 3 + fy * 2, 1.8, '#2b2118');
+    circle(hx + 3 + fx * 2, hy - 3 + fy * 2, 1.8, '#2b2118');
+    // Tail (wags faster when running or near Theo)
+    ctx.strokeStyle = '#d8a03e'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x - fx * 13, y - 2 + bob);
+    ctx.quadraticCurveTo(x - fx * 20, y - 10 + wag * 10, x - fx * 16, y - 18); ctx.stroke();
+    ctx.lineCap = 'butt';
+  }
+  if (active) {
+    ctx.strokeStyle = 'rgba(255,200,80,0.9)'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(x, y - 2, 22, 0, 6.2832); ctx.stroke();
+  }
+}
+
+function drawBadger(b) {
+  const x = b.x, y = b.y;
+  ell(x, y + 13, 14, 5, 'rgba(0,0,0,0.18)');
+  const wob = Math.sin(b.wob) * 1.2;
+
+  if (b.state === 'nap') {
+    // Curled up, breathing slowly.
+    const br = 1 + Math.sin(G.time * 1.8) * 0.06;
+    ctx.save(); ctx.translate(x, y + 2); ctx.scale(br, br);
+    ell(0, 0, 15, 11, '#8d8d94');
+    ell(0, -2, 15, 4, '#6f6f76');
+    // stripes
+    ctx.fillStyle = '#4a4a52';
+    ctx.fillRect(-11, -6, 4, 8); ctx.fillRect(-3, -6, 4, 8); ctx.fillRect(5, -6, 4, 8);
+    // head tucked
+    circle(10, 3, 8, '#9d9da4');
+    ctx.fillStyle = '#f0ece0';
+    ctx.fillRect(6, -1, 8, 3); // white stripe
+    ctx.fillStyle = '#2b2118';
+    circle(13, 3, 1.5, '#2b2118'); // closed eye line
+    ctx.restore();
+    // Z's
+    ctx.fillStyle = 'rgba(120,110,200,0.9)';
+    ctx.font = 'bold 13px Georgia'; ctx.textAlign = 'center';
+    const zo = (G.time * 12) % 30;
+    ctx.fillText('Z', x + 16, y - 14 - zo * 0.5);
+    if (zo > 10) ctx.fillText('Z', x + 24, y - 22 - (zo - 10) * 0.5);
+  } else {
+    // Awake: body low, head up.
+    ell(x, y + 4 + wob * 0.4, 16, 10, '#8d8d94');
+    ctx.fillStyle = '#4a4a52';
+    ctx.fillRect(x - 12, y - 2, 5, 9); ctx.fillRect(x - 3, y - 2, 5, 9); ctx.fillRect(x + 6, y - 2, 5, 9);
+    const hx = x + b.face.x * 14, hy = y - 6 + wob * 0.4;
+    circle(hx, hy, 9, '#9d9da4');
+    ctx.fillStyle = '#f0ece0';
+    ctx.fillRect(hx - 2, hy - 9, 4, 18); // white head stripe
+    ctx.fillStyle = '#2b2118';
+    circle(hx - 4 + b.face.x * 2, hy - 2, 2, '#2b2118');
+    circle(hx + 4 + b.face.x * 2, hy - 2, 2, '#2b2118');
+    ell(hx + b.face.x * 7, hy + 3, 3.5, 2.8, '#6f6f76'); // snout
+    // little legs scurry
+    ctx.fillStyle = '#6f6f76';
+    const lp = Math.sin(G.time * 18) * 3;
+    rr(x - 10, y + 10 + lp * 0.4, 6, 7, 3); ctx.fill();
+    rr(x + 4, y + 10 - lp * 0.4, 6, 7, 3); ctx.fill();
+    if (b.state === 'sniff') {
+      ctx.fillStyle = '#4a3520';
+      ctx.font = 'bold 20px Georgia'; ctx.textAlign = 'center';
+      const qy = y - 22 + Math.sin(G.time * 5) * 3;
+      ctx.fillText('?', x, qy);
+    } else if (b.state === 'chase') {
+      ctx.fillStyle = '#b03a2e';
+      ctx.font = 'bold 20px Georgia'; ctx.textAlign = 'center';
+      ctx.fillText('!', x, y - 24 + Math.sin(G.time * 10) * 2);
+    }
+  }
+}
+
+function drawRopeDrop() {
+  const L = LEVELS[G.levelIndex];
+  if (!L.rope || !G.ropeDown) return;
+  const ax = L.rope.ax * TILE + TILE / 2, ay = HUD_H + L.rope.ay * TILE + TILE / 2;
+  const tx = L.rope.tx * TILE + TILE / 2, ty = HUD_H + L.rope.ty * TILE + TILE / 2;
+  // Hanging rope on the target tile.
+  ctx.strokeStyle = '#b08a48'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(tx, ty - TILE / 2 + 4); ctx.lineTo(tx, ty + 12); ctx.stroke();
+  ctx.lineWidth = 3;
+  for (let i = 0; i < 3; i++) {
+    const ky = ty - 8 + i * 10;
+    ctx.beginPath(); ctx.moveTo(tx - 5, ky); ctx.lineTo(tx + 5, ky); ctx.stroke();
+  }
+  ctx.lineCap = 'butt';
+  // Coiled rope visual on anchor tile handled in drawTile.
+  void ax; void ay;
+}
+
+// ==================== HUD ====================
+function drawHUD() {
+  const L = LEVELS[G.levelIndex];
+  ctx.fillStyle = '#f2e3b8';
+  ctx.fillRect(0, 0, W, HUD_H);
+  ctx.fillStyle = '#b89b5e';
+  ctx.fillRect(0, HUD_H - 5, W, 5);
+  ctx.fillStyle = '#4a3520';
+  ctx.font = 'bold 21px Georgia'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText((G.levelIndex + 1) + '. ' + L.name, 14, HUD_H / 2 - 2);
+
+  let cx = 400;
+  // Fireflies
+  const pulse = 0.7 + 0.3 * Math.sin(G.time * 4);
+  const glow = ctx.createRadialGradient(cx, HUD_H / 2, 1, cx, HUD_H / 2, 15);
+  glow.addColorStop(0, 'rgba(255,226,122,' + pulse + ')');
+  glow.addColorStop(1, 'rgba(255,226,122,0)');
+  ctx.fillStyle = glow; ctx.fillRect(cx - 16, 0, 32, HUD_H);
+  circle(cx, HUD_H / 2, 7, '#e8b83a');
+  circle(cx, HUD_H / 2, 3, '#fff6c8');
+  ctx.fillStyle = '#4a3520'; ctx.font = 'bold 19px Georgia'; ctx.textAlign = 'left';
+  ctx.fillText('x ' + G.fireflyCount, cx + 14, HUD_H / 2 + 1);
+  cx += 90;
+  // Key
+  if (G.hasKey) { drawKeyIcon(cx, HUD_H / 2, 0.9); cx += 46; }
+  // Compass (relic)
+  if (G.hasRelic) { drawCompassIcon(cx, HUD_H / 2, 13, false); cx += 44; }
+
+  // Switch indicator (right): mini faces, active highlighted.
+  const ix = W - 96, iy = HUD_H / 2;
+  // Theo face
+  circle(ix, iy, 15, G.controlled === 'theo' ? '#ffd97a' : '#d9c9a0');
+  circle(ix, iy, 12, '#f0c49c');
+  ctx.fillStyle = '#4e7d3a';
+  ctx.beginPath(); ctx.arc(ix, iy - 2, 12, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = '#2b2118';
+  circle(ix - 4, iy + 1, 1.8, '#2b2118'); circle(ix + 4, iy + 1, 1.8, '#2b2118');
+  if (G.controlled === 'theo') {
+    ctx.strokeStyle = '#d88f2a'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(ix, iy, 17, 0, 6.2832); ctx.stroke();
+  }
+  // Pip face
+  const jx = W - 40;
+  circle(jx, iy, 15, G.controlled === 'pip' ? '#ffd97a' : '#d9c9a0');
+  circle(jx, iy, 12, '#d8a03e');
+  ell(jx - 9, iy - 6, 3.5, 7, '#b57e28'); ell(jx + 9, iy - 6, 3.5, 7, '#b57e28');
+  ctx.fillStyle = '#2b2118';
+  circle(jx - 4, iy + 1, 1.8, '#2b2118'); circle(jx + 4, iy + 1, 1.8, '#2b2118');
+  ell(jx, iy + 6, 4, 3, '#8a5a2a');
+  if (G.controlled === 'pip') {
+    ctx.strokeStyle = '#d88f2a'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(jx, iy, 17, 0, 6.2832); ctx.stroke();
+  }
+  ctx.fillStyle = '#4a3520'; ctx.font = '12px Georgia'; ctx.textAlign = 'center';
+  ctx.fillText('TAB', W - 68, HUD_H - 10);
+}
+
+// ==================== TOUCH CONTROLS ====================
+function drawTouch() {
+  // Joystick
+  if (joy.id !== null) {
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    circle(joy.ox, joy.oy, 52, 'rgba(255,255,255,0.18)');
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(joy.ox, joy.oy, 52, 0, 6.2832); ctx.stroke();
+    circle(joy.ox + joy.dx * 40, joy.oy + joy.dy * 40, 24, 'rgba(255,255,255,0.45)');
+  }
+  drawBtn(BTN_ACTION, '#3f6fb5');
+  drawBtn(BTN_SWITCH, '#d88f2a');
+  drawBtn(BTN_WHISTLE, '#6fa554');
+  drawBtn(BTN_STICK, '#8a5f36');
+}
+function drawBtn(b, color) {
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  circle(b.x + 2, b.y + 3, b.r, 'rgba(0,0,0,0.25)');
+  circle(b.x, b.y, b.r, color);
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(b.x, b.y, b.r - 2, 0, 6.2832); ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold ' + (b.r > 32 ? 13 : 10) + 'px Georgia';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(b.label, b.x, b.y + 1);
+}
+
+// ==================== OVERLAYS ====================
+function dimScreen(a) {
+  ctx.fillStyle = 'rgba(30,22,14,' + a + ')';
+  ctx.fillRect(0, 0, W, H);
+}
+function parchmentCard(x, y, w, h) {
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  rr(x + 4, y + 6, w, h, 14); ctx.fill();
+  ctx.fillStyle = '#f5e9c8';
+  rr(x, y, w, h, 14); ctx.fill();
+  ctx.strokeStyle = '#b89b5e'; ctx.lineWidth = 3;
+  rr(x, y, w, h, 14); ctx.stroke();
+}
+function wrapText(text, maxW) {
+  ctx.font = '17px Georgia';
+  const words = text.split(' '), lines = [];
+  let line = '';
+  for (const wd of words) {
+    const t = line ? line + ' ' + wd : wd;
+    if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = wd; }
+    else line = t;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function drawIntro() {
+  dimScreen(0.55);
+  const L = LEVELS[G.levelIndex];
+  parchmentCard(180, 170, 600, 280);
+  ctx.fillStyle = '#4a3520'; ctx.textAlign = 'center';
+  ctx.font = 'bold 30px Georgia';
+  ctx.fillText('Trail ' + (G.levelIndex + 1) + ': ' + L.name, 480, 225);
+  ctx.strokeStyle = '#b89b5e'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(280, 248); ctx.lineTo(680, 248); ctx.stroke();
+  const lines = wrapText(L.intro, 520);
+  ctx.font = '17px Georgia';
+  lines.forEach(function (ln, i) { ctx.fillText(ln, 480, 280 + i * 26); });
+  // Controls reminder
+  ctx.font = '14px Georgia'; ctx.fillStyle = '#7a5f3a';
+  ctx.fillText('Move: WASD / arrows / joystick    Action: SPACE', 480, 360);
+  ctx.fillText('Switch: TAB    Whistle: F    Stick: X', 480, 382);
+  const bl = 0.6 + 0.4 * Math.sin(G.time * 4);
+  ctx.fillStyle = 'rgba(74,53,32,' + bl + ')';
+  ctx.font = 'bold 18px Georgia';
+  ctx.fillText('Tap or press SPACE to begin', 480, 420);
+}
+
+function drawWin() {
+  dimScreen(0.55);
+  const L = LEVELS[G.levelIndex];
+  const last = G.levelIndex === LEVELS.length - 1;
+  parchmentCard(230, 180, 500, 300);
+  ctx.fillStyle = '#4a3520'; ctx.textAlign = 'center';
+  ctx.font = 'bold 32px Georgia';
+  ctx.fillText('Trail Complete!', 480, 240);
+  ctx.font = '17px Georgia';
+  ctx.fillText('Fireflies this trail: ' + G.fireflyCount, 480, 285);
+  ctx.fillText('Total fireflies: ' + totalFireflies(), 480, 312);
+  if (L.relic) ctx.fillText('The compass is safe with Theo.', 480, 339);
+  // Next button
+  ctx.fillStyle = '#4e7d3a';
+  rr(BTN_NEXT.x - BTN_NEXT.w / 2, BTN_NEXT.y - BTN_NEXT.h / 2, BTN_NEXT.w, BTN_NEXT.h, 12); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 20px Georgia'; ctx.textBaseline = 'middle';
+  ctx.fillText(last ? 'Finish' : 'Next Trail', BTN_NEXT.x, BTN_NEXT.y + 1);
+  ctx.textBaseline = 'alphabetic';
+}
+
+function drawFinal() {
+  dimScreen(0.65);
+  parchmentCard(150, 120, 660, 400);
+  ctx.fillStyle = '#4a3520'; ctx.textAlign = 'center';
+  ctx.font = 'bold 30px Georgia';
+  ctx.fillText("The Map Is Finished!", 480, 175);
+  drawCompassIcon(480, 235, 34, true);
+  ctx.font = '17px Georgia';
+  const story = "Theo sets Grandfather's marker beside the compass. Every trail walked, every blank space filled. Pip curls up at the last campsite, tail thumping the ground. The wilds gave it back — all of it.";
+  const lines = wrapText(story, 560);
+  lines.forEach(function (ln, i) { ctx.fillText(ln, 480, 295 + i * 26); });
+  ctx.font = 'bold 17px Georgia';
+  ctx.fillText('Total fireflies: ' + totalFireflies(), 480, 400);
+  ctx.fillStyle = '#4e7d3a';
+  rr(BTN_AGAIN.x - BTN_AGAIN.w / 2, BTN_AGAIN.y - BTN_AGAIN.h / 2, BTN_AGAIN.w, BTN_AGAIN.h, 12); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 20px Georgia'; ctx.textBaseline = 'middle';
+  ctx.fillText('Play Again', BTN_AGAIN.x, BTN_AGAIN.y + 1);
+  ctx.textBaseline = 'alphabetic';
+}
+
+function drawSignBubble() {
+  if (!G.signText) return;
+  const lines = wrapText(G.signText, 300);
+  const w = 340, h = 34 + lines.length * 24;
+  // Find signpost of controlled char... just anchor near Theo.
+  let sx = G.theo.x, sy = G.theo.y - 60;
+  sx = Math.max(w / 2 + 8, Math.min(W - w / 2 - 8, sx));
+  sy = Math.max(HUD_H + h / 2 + 8, sy);
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  rr(sx - w / 2 + 3, sy - h / 2 + 4, w, h, 10); ctx.fill();
+  ctx.fillStyle = '#fffbe8';
+  rr(sx - w / 2, sy - h / 2, w, h, 10); ctx.fill();
+  ctx.strokeStyle = '#b89b5e'; ctx.lineWidth = 2;
+  rr(sx - w / 2, sy - h / 2, w, h, 10); ctx.stroke();
+  ctx.fillStyle = '#4a3520'; ctx.textAlign = 'center'; ctx.font = '15px Georgia';
+  lines.forEach(function (ln, i) { ctx.fillText(ln, sx, sy - h / 2 + 26 + i * 24); });
+}
+
+// ==================== MAIN DRAW ====================
+function draw() {
+  if (!G) return;
+  // Sky/ground backdrop (in case of gaps).
+  ctx.fillStyle = '#76a05e';
+  ctx.fillRect(0, HUD_H, W, PLAY_H);
+
+  for (let y = 0; y < ROWS; y++)
+    for (let x = 0; x < COLS; x++)
+      drawTile(x, y);
+
+  drawRopeDrop();
+
+  // Stick (landed or flying).
+  if (G.stick) {
+    const s = G.stick;
+    ell(s.x, s.y + 8, 8, 3, 'rgba(0,0,0,0.18)');
+    ctx.strokeStyle = '#7a5230'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    const a = s.t < 1 ? s.t * 6 : 0.5;
+    ctx.beginPath();
+    ctx.moveTo(s.x - Math.cos(a) * 12, s.y - Math.sin(a) * 12);
+    ctx.lineTo(s.x + Math.cos(a) * 12, s.y + Math.sin(a) * 12);
+    ctx.stroke();
+    ctx.lineCap = 'butt';
+  }
+
+  if (G.badger) drawBadger(G.badger);
+  // Draw Pip first if he's "behind" Theo? Keep simple: Theo then Pip.
+  drawTheo(G.theo);
+  drawPip(G.pip);
+
+  // Particles
+  for (const p of G.particles) {
+    const a = Math.max(0, p.life / p.maxLife);
+    if (p.ring) {
+      ctx.strokeStyle = 'rgba(255,255,255,' + a + ')';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size + (1 - a) * 34, 0, 6.2832); ctx.stroke();
+    } else {
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = a;
+      circle(p.x, p.y, p.size * a + 0.5, p.color);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  drawSignBubble();
+  drawHUD();
+  if (G.mode === 'play' && !GB_SHELL) drawTouch();
+
+  if (G.flash > 0) {
+    ctx.fillStyle = 'rgba(255,240,220,' + Math.min(0.7, G.flash * 1.6) + ')';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  if (G.mode === 'intro') drawIntro();
+  else if (G.mode === 'win') drawWin();
+  else if (G.mode === 'final') drawFinal();
+}
+
+// ==================== GAME LOOP ====================
+let lastT = 0;
+function loop(t) {
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.05, ((t - lastT) / 1000) || 0.016);
+  lastT = t;
+  if (!G) return;
+  if (G.mode === 'play') update(dt);
+  else {
+    G.time += dt;
+    updateParticles(dt);
+    if (G.signTimer > 0) { G.signTimer -= dt; if (G.signTimer <= 0) G.signText = null; }
+  }
+  draw();
+}
+
+loadLevel(0);
+requestAnimationFrame(loop);
+
+
+/* ===== SHELL: wire the physical buttons to the game's real inputs =====
+   Joystick -> game 'joy' analog vector (move, incl. diagonals)
+   A -> Space (act / menus) | B -> Tab (swap)
+   START -> F (whistle) | SELECT -> X (throw stick) */
+(function () {
+  var KEY_FOR = { A: ' ', B: 'Tab', Start: 'f', Select: 'x' };
+  function gameKey(name, type) {
+    var e;
+    try {
+      e = new KeyboardEvent(type, { key: KEY_FOR[name], bubbles: true, cancelable: true });
+    } catch (err) {
+      e = document.createEvent('Event');
+      e.initEvent(type, true, true);
+      e.key = KEY_FOR[name];
+    }
+    window.dispatchEvent(e);
+  }
+  function bindBtn(id, name) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var down = function (ev) { ev.preventDefault(); el.classList.add('pressed'); gameKey(name, 'keydown'); };
+    var up = function (ev) { ev.preventDefault(); el.classList.remove('pressed'); gameKey(name, 'keyup'); };
+    el.addEventListener('touchstart', down, { passive: false });
+    el.addEventListener('touchend', up, { passive: false });
+    el.addEventListener('touchcancel', up, { passive: false });
+    el.addEventListener('mousedown', down);
+    el.addEventListener('mouseup', up);
+    el.addEventListener('mouseleave', up);
+    el.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
+  }
+  bindBtn('btnA', 'A'); bindBtn('btnB', 'B');
+  bindBtn('btnStart', 'Start'); bindBtn('btnSelect', 'Select');
+  bindBtn('lA', 'A'); bindBtn('lB', 'B');
+  bindBtn('lStart', 'Start'); bindBtn('lSelect', 'Select');
+
+  /* Analog joysticks: drag the nub to move. Writes the game's own 'joy'
+     vector (joy.dx / joy.dy, -1..1), which the engine already merges with
+     keyboard input and normalizes — so diagonals move at full speed and
+     tilt controls speed. Dead zone 18% of travel; knob clamps to the rim.
+     Pointer capture keeps the drag alive over other fingers pressing A/B. */
+  var joySticks = [];
+  function bindJoystick(baseId, nubId) {
+    var base = document.getElementById(baseId);
+    var nub = document.getElementById(nubId);
+    if (!base || !nub || typeof joy === 'undefined') return;
+    var pid = null, cx = 0, cy = 0, maxR = 40;
+    function reset() {
+      if (pid === null) return;
+      pid = null;
+      joy.id = null; joy.dx = 0; joy.dy = 0;
+      nub.style.transform = '';
+      base.classList.remove('active');
+    }
+    function center() {
+      var r = base.getBoundingClientRect();
+      cx = r.left + r.width / 2; cy = r.top + r.height / 2;
+      maxR = Math.max(20, (r.width - nub.offsetWidth) / 2 - 4);
+    }
+    function update(ev) {
+      var dx = ev.clientX - cx, dy = ev.clientY - cy;
+      var dist = Math.hypot(dx, dy);
+      if (dist > maxR) { dx = dx / dist * maxR; dy = dy / dist * maxR; dist = maxR; }
+      var dead = maxR * 0.18;
+      if (dist < dead) { joy.dx = 0; joy.dy = 0; }
+      else {
+        var tilt = (dist - dead) / (maxR - dead);
+        joy.dx = dx / dist * tilt; joy.dy = dy / dist * tilt;
+      }
+      nub.style.transform = 'translate(-50%,-50%) translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px)';
+    }
+    base.addEventListener('pointerdown', function (ev) {
+      if (pid !== null || joy.id !== null) return;
+      ev.preventDefault();
+      center();
+      pid = ev.pointerId;
+      joy.id = ev.pointerId; joy.dx = 0; joy.dy = 0;
+      base.classList.add('active');
+      try { base.setPointerCapture(ev.pointerId); } catch (err) {}
+      update(ev);
+    });
+    base.addEventListener('pointermove', function (ev) {
+      if (ev.pointerId !== pid) return;
+      ev.preventDefault();
+      update(ev);
+    });
+    base.addEventListener('pointerup', function (ev) { if (ev.pointerId === pid) reset(); });
+    base.addEventListener('pointercancel', function (ev) { if (ev.pointerId === pid) reset(); });
+    base.addEventListener('lostpointercapture', function (ev) { if (ev.pointerId === pid) reset(); });
+    base.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
+    joySticks.push({ reset: reset });
+  }
+  bindJoystick('joyBase', 'joyNub');
+  bindJoystick('lJoyBase', 'lJoyNub');
+  /* Kill any stuck tilt on resize / rotate / tab hide / window blur */
+  function resetAllJoy() {
+    if (typeof joy !== 'undefined' && joy.id !== null) { joy.id = null; joy.dx = 0; joy.dy = 0; }
+    joySticks.forEach(function (s) { s.reset(); });
+  }
+  window.addEventListener('resize', resetAllJoy);
+  window.addEventListener('orientationchange', resetAllJoy);
+  window.addEventListener('blur', resetAllJoy);
+  document.addEventListener('visibilitychange', function () { if (document.hidden) resetAllJoy(); });
+
+  /* One canvas, two screens: move it into whichever shell is visible.
+     Mirrors the CSS: landscape when (landscape and narrow) or (landscape and touch). */
+  var portraitBox = document.getElementById('canvasBox');
+  var landBox = document.getElementById('landScreenBox');
+  function shellIsLandscape() {
+    return window.matchMedia('(orientation: landscape) and (max-width: 940px)').matches ||
+           window.matchMedia('(orientation: landscape) and (pointer: coarse)').matches;
+  }
+  function setModeFromMedia() {
+    var target = shellIsLandscape() ? landBox : portraitBox;
+    if (canvas.parentElement !== target) target.appendChild(canvas);
+  }
+  setModeFromMedia();
+  window.addEventListener('resize', setModeFromMedia);
+  window.addEventListener('orientationchange', setModeFromMedia);
+})();
+</script>
+</body>
+</html>
