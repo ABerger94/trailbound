@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
+<title>Trailbound</title>
+<style>
+  :root{
+    --ink:#e9f1ff; --bg:#0b1020;
+    /* GBC palette */
+    --gbc-aqua:#54C9C1; --gbc-aqua-dark:#3CA79F; --gbc-aqua-light:#7EDDD7;
+    --gbc-bezel:#0b0b0b; --gbc-screen:#222; --gbc-shadow:rgba(0,0,0,.45);
+    /* GBA palette */
+    --gba-body1:#5860A3; --gba-body2:#3F447D; --gba-body3:#2B2E57;
+    /* Buttons */
+    --btnA:#6C38FF; --btnB:#FF3B5C; --btnStart:#4a4a4a;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial;
+    overscroll-behavior:none; -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent;}
+
+  /* ===== Shared topbar ===== */
+  .topbar{display:flex;align-items:center;justify-content:space-between;
+    font-weight:800;letter-spacing:.08em;margin-bottom:10px;color:#dfe8ff}
+  .topbar .power{display:flex;gap:6px;align-items:center;color:#ddd;font-size:12px}
+  .topbar .led{width:10px;height:10px;border-radius:999px;
+    background:radial-gradient(circle at 30% 30%,#f66,#a11414);
+    box-shadow:0 0 10px #f33,inset 0 0 2px #fff}
+
+  /* ===== GBC Portrait Shell ===== */
+  .gbc-shell{
+    max-width:min(920px,96vw);
+    margin:14px auto;
+    padding:18px 18px 24px;
+    background:linear-gradient(160deg,var(--gbc-aqua-light),var(--gbc-aqua) 40%,var(--gbc-aqua-dark) 100%);
+    border-radius:22px;
+    box-shadow:0 18px 36px var(--gbc-shadow), inset 0 6px 0 rgba(255,255,255,.08), inset 0 -6px 0 rgba(0,0,0,.12);
+    border:2px solid rgba(0,0,0,.2);
+  }
+  .gbc-face{
+    background:linear-gradient(180deg,#1b1b1b,#111);
+    border-radius:16px; padding:16px;
+    box-shadow:inset 0 6px 14px rgba(0,0,0,.55);
+    color:#dfe8ff;
+  }
+  .gb-screen{
+    background:var(--gbc-bezel); border-radius:14px; padding:14px;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.05), inset 0 0 24px rgba(0,0,0,.8);
+  }
+  #canvasBox{background:var(--gbc-screen); border:1px solid rgba(255,255,255,.06); border-radius:10px; box-shadow: inset 0 0 24px rgba(0,0,0,.65); overflow:hidden}
+  #game{display:block; width:100%; height:auto; image-rendering:pixelated; background:#20314f; touch-action:none;}
+  .gb-screen::after{
+    content:""; display:block; width:120px; height:40px; margin:10px 0 0 auto;
+    background:
+      radial-gradient(circle at 6px 6px, rgba(0,0,0,.8) 3px, transparent 4px) 0 0/16px 16px,
+      radial-gradient(circle at 14px 14px, rgba(0,0,0,.8) 3px, transparent 4px) 0 0/16px 16px;
+    opacity:.45; filter:drop-shadow(0 1px 0 rgba(255,255,255,.05)); border-radius:6px;
+  }
+
+  /* Portrait controls */
+  #mobileControls{
+    display:grid;
+    grid-template-columns: 160px 1fr 160px;
+    grid-template-rows: auto auto;
+    gap:12px;
+    background:linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.15));
+    border:1px solid rgba(255,255,255,.06); border-radius:14px;
+    box-shadow: inset 0 8px 22px rgba(0,0,0,.5), 0 10px 22px rgba(0,0,0,.35);
+    padding:16px; margin-top:12px;
+  }
+  .dpad{grid-column:1; grid-row:1 / span 2; width:160px; height:160px; position:relative;
+        background:#0e0e14; border:1px solid #232323; border-radius:16px; box-shadow:inset 0 8px 14px rgba(0,0,0,.6)}
+  .dpad .cross{position:absolute; inset:0; margin:auto; width:120px; height:120px; background:#1a1a1a; border-radius:14px}
+  .dpad .cross::before,.dpad .cross::after{content:""; position:absolute; background:#1a1a1a; border-radius:12px}
+  .dpad .cross::before{left:0; right:0; top:50%; height:40px; transform:translateY(-50%)}
+  .dpad .cross::after{top:0; bottom:0; left:50%; width:40px; transform:translateX(-50%)}
+  .dpad button{position:absolute; width:60px; height:60px; background:#111; border:1px solid #2a2a2a; border-radius:14px; color:#98a4b9; font-weight:900; font-size:18px; touch-action:manipulation}
+  #btnUp{left:50%; top:6px; transform:translateX(-50%)}
+  #btnDown{left:50%; bottom:6px; transform:translateX(-50%)}
+  #btnLeft{left:6px; top:50%; transform:translateY(-50%)}
+  #btnRight{right:6px; top:50%; transform:translateY(-50%)}
+
+  .actCluster{grid-column:3; grid-row:1; width:140px; height:120px; position:relative; margin:auto}
+  .actCluster .btn{position:absolute; width:56px; height:56px; border-radius:999px; border:1px solid #1b2a52; color:#e9f1ff; font-weight:800; font-size:16px; box-shadow:inset 0 8px 18px rgba(0,0,0,.45); touch-action:manipulation}
+  #btnA{background:var(--btnA); right:6px; top:8px}
+  #btnB{background:var(--btnB); left:16px; bottom:6px}
+  .startRow{grid-column:3; grid-row:2; display:flex; justify-content:center; gap:12px; align-items:center}
+  .startRow .tiny{min-width:auto; width:72px; height:32px; border-radius:999px; background:var(--btnStart); border:1px solid #222; color:white; font-weight:800; letter-spacing:.06em; font-size:12px; touch-action:manipulation}
+
+  /* ===== GBA Landscape Shell ===== */
+  .gba-shell{ display:none; }
+  .gba-body{
+    width:min(98vw,1200px);
+    margin:10px auto;
+    padding:18px;
+    border-radius:42px;
+    background:linear-gradient(160deg,var(--gba-body1),var(--gba-body2) 55%,var(--gba-body3));
+    box-shadow: 0 20px 40px rgba(0,0,0,.55), inset 0 12px 22px rgba(255,255,255,.08), inset 0 -14px 28px rgba(0,0,0,.35);
+    border:2px solid rgba(0,0,0,.28);
+  }
+  .gba-topbar{margin-bottom:12px;}
+  .gba-tray{
+    background:rgba(0,0,0,.18);
+    border-radius:28px;
+    padding:14px;
+    box-shadow: inset 0 8px 24px rgba(0,0,0,.45), inset 0 -6px 18px rgba(255,255,255,.05);
+  }
+  #landscapeRow{
+    display:grid;
+    grid-template-columns: 172px 1fr 160px;
+    gap:14px;
+    align-items:center;
+  }
+
+  .land-dpad{ width:172px; height:172px; position:relative; margin:auto;
+              background:#0e0e14; border:1px solid #232323; border-radius:18px; box-shadow:inset 0 8px 14px rgba(0,0,0,.6)}
+  .land-dpad .cross{position:absolute; inset:0; margin:auto; width:128px; height:128px; background:#1a1a1a; border-radius:14px}
+  .land-dpad .cross::before,.land-dpad .cross::after{content:""; position:absolute; background:#1a1a1a; border-radius:12px}
+  .land-dpad .cross::before{left:0; right:0; top:50%; height:42px; transform:translateY(-50%)}
+  .land-dpad .cross::after{top:0; bottom:0; left:50%; width:42px; transform:translateX(-50%)}
+  .land-dpad button{position:absolute; width:68px; height:68px; background:#111; border:1px solid #2a2a2a; border-radius:14px; color:#98a4b9; font-weight:900; font-size:20px; touch-action:manipulation}
+  #lUp{left:50%; top:6px; transform:translateX(-50%)}
+  #lDown{left:50%; bottom:6px; transform:translateX(-50%)}
+  #lLeft{left:6px; top:50%; transform:translateY(-50%)}
+  #lRight{right:6px; top:50%; transform:translateY(-50%)}
+
+  .land-screen-bezel{background:#0f1116;border-radius:18px;padding:12px;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.05), inset 0 0 28px rgba(0,0,0,.75);}
+  .land-screen{ background:#141824; border-radius:12px; padding:8px; box-shadow: inset 0 0 24px rgba(0,0,0,.55); }
+  #landScreenBox{ border:1px solid #2a2a2a; border-radius:8px; overflow:hidden; background:#20314f; }
+
+  .land-actions{ display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .land-actions .ab{ position:relative; width:160px; height:132px; }
+  .land-actions .ab .btn{ position:absolute; width:60px; height:60px; border-radius:999px; border:1px solid #1b2a52; color:#e9f1ff; font-weight:800; font-size:16px; box-shadow:inset 0 8px 18px rgba(0,0,0,.45); touch-action:manipulation }
+  #lA{ background:var(--btnA); right:6px; top:6px }
+  #lB{ background:var(--btnB); left:14px; bottom:8px }
+  .land-actions .start{ display:flex; gap:10px; }
+  .land-actions .start .tiny{ min-width:auto; width:72px; height:32px; border-radius:999px; background:var(--btnStart); border:1px solid #222; color:white; font-weight:800; font-size:12px; touch-action:manipulation }
+
+  /* ===== Mode switching ===== */
+  @media (orientation: landscape) and (max-width: 940px){
+    .gbc-shell{ display:none !important; }
+    .gba-shell{ display:block; }
+  }
+  @media (min-width: 941px){
+    .gba-shell{ display:none !important; }
+    #mobileControls{ display:none; }
+  }
+</style>
+</head>
+<body>
+  <!-- PORTRAIT -->
+  <div class="gbc-shell">
+    <div class="gbc-face">
+      <div class="topbar">
+        <span>TRAILBOUND</span>
+        <span class="power"><span class="led"></span>POWER</span>
+      </div>
+      <div class="gb-screen">
+        <div id="canvasBox">
+          <canvas id="game" width="960" height="640"></canvas>
+        </div>
+      </div>
+      <div id="mobileControls">
+        <div class="dpad">
+          <div class="cross"></div>
+          <button id="btnUp">▲</button>
+          <button id="btnDown">▼</button>
+          <button id="btnLeft">◀</button>
+          <button id="btnRight">▶</button>
+        </div>
+        <div></div>
+        <div class="actCluster">
+          <button class="btn" id="btnA">A</button>
+          <button class="btn" id="btnB">B</button>
+        </div>
+        <div></div>
+        <div class="startRow">
+          <button class="tiny" id="btnStart">START</button>
+          <button class="tiny" id="btnSelect">SELECT</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LANDSCAPE -->
+  <div class="gba-shell">
+    <div class="gba-body">
+      <div class="topbar gba-topbar">
+        <span>TRAILBOUND</span>
+        <span class="power"><span class="led"></span>POWER</span>
+      </div>
+      <div class="gba-tray">
+        <div id="landscapeRow">
+          <!-- D-pad -->
+          <div class="land-dpad">
+            <div class="cross"></div>
+            <button id="lUp">▲</button>
+            <button id="lDown">▼</button>
+            <button id="lLeft">◀</button>
+            <button id="lRight">▶</button>
+          </div>
+          <!-- Screen -->
+          <div class="land-screen-bezel">
+            <div class="land-screen">
+              <div id="landScreenBox"></div>
+            </div>
+          </div>
+          <!-- Actions -->
+          <div class="land-actions">
+            <div class="ab">
+              <button class="btn" id="lA">A</button>
+              <button class="btn" id="lB">B</button>
+            </div>
+            <div class="start">
+              <button class="tiny" id="lStart">START</button>
+              <button class="tiny" id="lSelect">SELECT</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/*__GAME_JS__*/
+
+/* ===== SHELL: wire the physical buttons to the game's real inputs =====
+   D-pad -> arrow keys (movement) | A -> Space (act) | B -> Tab (switch)
+   START -> Enter (menus) | SELECT -> F (whistle) */
+(function () {
+  var KEY_FOR = {
+    Up: 'ArrowUp', Down: 'ArrowDown', Left: 'ArrowLeft', Right: 'ArrowRight',
+    A: ' ', B: 'Tab', Start: 'Enter', Select: 'f'
+  };
+  function gameKey(name, type) {
+    var e;
+    try {
+      e = new KeyboardEvent(type, { key: KEY_FOR[name], bubbles: true, cancelable: true });
+    } catch (err) {
+      e = document.createEvent('Event');
+      e.initEvent(type, true, true);
+      e.key = KEY_FOR[name];
+    }
+    window.dispatchEvent(e);
+  }
+  function bindBtn(id, name) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var down = function (ev) { ev.preventDefault(); gameKey(name, 'keydown'); };
+    var up = function (ev) { ev.preventDefault(); gameKey(name, 'keyup'); };
+    el.addEventListener('touchstart', down, { passive: false });
+    el.addEventListener('touchend', up, { passive: false });
+    el.addEventListener('touchcancel', up, { passive: false });
+    el.addEventListener('mousedown', down);
+    el.addEventListener('mouseup', up);
+    el.addEventListener('mouseleave', up);
+    el.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
+  }
+  bindBtn('btnUp', 'Up'); bindBtn('btnDown', 'Down');
+  bindBtn('btnLeft', 'Left'); bindBtn('btnRight', 'Right');
+  bindBtn('btnA', 'A'); bindBtn('btnB', 'B');
+  bindBtn('btnStart', 'Start'); bindBtn('btnSelect', 'Select');
+  bindBtn('lUp', 'Up'); bindBtn('lDown', 'Down');
+  bindBtn('lLeft', 'Left'); bindBtn('lRight', 'Right');
+  bindBtn('lA', 'A'); bindBtn('lB', 'B');
+  bindBtn('lStart', 'Start'); bindBtn('lSelect', 'Select');
+
+  /* One canvas, two screens: move it into whichever shell is visible. */
+  var portraitBox = document.getElementById('canvasBox');
+  var landBox = document.getElementById('landScreenBox');
+  function setModeFromMedia() {
+    var isLand = window.matchMedia('(orientation: landscape) and (max-width: 940px)').matches;
+    var target = isLand ? landBox : portraitBox;
+    if (canvas.parentElement !== target) target.appendChild(canvas);
+  }
+  setModeFromMedia();
+  window.addEventListener('resize', setModeFromMedia);
+  window.addEventListener('orientationchange', setModeFromMedia);
+})();
+</script>
+</body>
+</html>
